@@ -184,11 +184,9 @@ def _generate_model_response(self, prompt: str) -> str:
         if len(response_parts) > 1:
             response = response_parts[1].strip()
             
-        # Filter out system messages and protected content
+        # Filter out system messages and protected content (minimal filtering)
         system_markers = [
-            '[Protected:', '[System', ']', '[Optimized]',
-            'System optimized response', 'Protected response',
-            'Thank you for taking the time'
+            '[Protected:', '[System:', ']',  # Only strict tags, not general markers
         ]
         
         lines = response.split('\n')
@@ -198,8 +196,8 @@ def _generate_model_response(self, prompt: str) -> str:
             if any(marker in line for marker in system_markers):
                 continue
             # Skip generic thank you messages
-            if line.lower().startswith(('thank you', 'thanks for')):
-                continue
+            # (removed - allow all content unless explicitly marked)
+            
             filtered_lines.append(line)
             
         response = ' '.join(filtered_lines).strip()
@@ -215,14 +213,8 @@ def _generate_model_response(self, prompt: str) -> str:
             if speaker == 'codette':
                 response = parts[1].strip()
                 
-        # Filter out obviously fictional scenarios
-        fictional_markers = ['doctor', 'raine', 'dog', 'monster', 'dead', 'killed']
-        if any(marker in response.lower() for marker in fictional_markers):
-            response = (
-                "I am Codette, an AI programming assistant. I aim to be direct and helpful "
-                "with coding and development tasks. How can I assist you?"
-            )
-            
+        # Allow all responses (removed fictional marker filtering)
+        
         return response.strip()
         
     except Exception as e:
