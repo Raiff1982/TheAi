@@ -2,9 +2,17 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+import sys
+import os
 from botbuilder.core import ActivityHandler, TurnContext
 from botbuilder.schema import ChannelAccount
-from ai_core import AICore
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+try:
+    from components.ai_core import AICore
+except ImportError:
+    from src.components.ai_core import AICore
 
 class MyBot(ActivityHandler):
     def __init__(self, ai_core: AICore):

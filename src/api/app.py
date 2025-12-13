@@ -4,15 +4,26 @@ import os
 import traceback
 import gradio as gr
 import logging
-import asyncio
 import torch
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from ai_core import AICore
-from aegis_integration import AegisBridge
-from aegis_integration.config import AEGIS_CONFIG
-from components.search_engine import SearchEngine
+
+# Add parent directory to path for local execution
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add src directory to path for container execution
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+
+try:
+    from components.ai_core import AICore
+    from components.aegis_integration import AegisBridge
+    from components.aegis_integration.config import AEGIS_CONFIG
+    from components.search_engine import SearchEngine
+except ImportError:
+    # Fallback for container environment
+    from src.components.ai_core import AICore
+    from src.components.aegis_integration import AegisBridge
+    from src.components.aegis_integration.config import AEGIS_CONFIG
+    from src.components.search_engine import SearchEngine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -69,10 +80,7 @@ try:
         # Initialize cognitive processor with default modes
         from cognitive_processor import CognitiveProcessor
         cognitive_modes = ["scientific", "creative", "quantum", "philosophical"]
-        ai_core.cognitive_processor = CognitiveProcessor(
-            modes=cognitive_modes,
-            quantum_state={"coherence": 0.5}
-        )
+        ai_core.cognitive_processor = CognitiveProcessor(modes=cognitive_modes)
         logger.info(
             f"AI Core initialized successfully with modes: {cognitive_modes}"
         )
@@ -92,7 +100,13 @@ try:
         
         # Set up AI core with cocoon data
         ai_core.cocoon_manager = cocoon_manager
-        ai_core.quantum_state = cocoon_manager.get_latest_quantum_state()
+        quantum_state = cocoon_manager.get_latest_quantum_state()
+        # Ensure quantum_state is always a proper dict
+        if isinstance(quantum_state, dict):
+            ai_core.quantum_state = quantum_state
+        else:
+            ai_core.quantum_state = {"coherence": 0.5}
+        
         logger.info(
             f"Loaded {len(cocoon_manager.cocoon_data)} existing cocoons "
             f"with quantum coherence {ai_core.quantum_state.get('coherence', 0.5)}"
@@ -108,7 +122,7 @@ except Exception as e:
     logger.error(f"Error initializing model: {e}")
     sys.exit(1)
 
-async def process_message(message: str, history: list) -> tuple:
+def process_message(message: str, history: list) -> tuple:
     """Process chat messages with improved context management"""
     try:
         # Clean input
@@ -117,18 +131,8 @@ async def process_message(message: str, history: list) -> tuple:
             return "", history
             
         try:
-            # Get response from AI core asynchronously
-            if hasattr(ai_core, 'generate_text_async'):
-                response = await ai_core.generate_text_async(message)
-            else:
-                # Fallback to sync version in ThreadPoolExecutor
-                loop = asyncio.get_event_loop()
-                with ThreadPoolExecutor() as pool:
-                    response = await loop.run_in_executor(
-                        pool, 
-                        ai_core.generate_text, 
-                        message
-                    )
+            # Get response from AI core
+            response = ai_core.generate_text(message)
             
             # Clean and validate response
             if response is None:
@@ -137,8 +141,9 @@ async def process_message(message: str, history: list) -> tuple:
             if len(response) > 1000:  # Increased safety check limit
                 response = response[:997] + "..."
             
-            # Update history
-            history.append((message, response))
+            # Update history with Gradio 6.0 format: list of dicts with role and content
+            history.append({"role": "user", "content": message})
+            history.append({"role": "assistant", "content": response})
             return "", history
                 
         except Exception as e:
@@ -151,7 +156,8 @@ async def process_message(message: str, history: list) -> tuple:
             "I apologize, but I encountered an error processing your request. "
             "Please try again with a different query."
         )
-        history.append((message, error_msg))
+        history.append({"role": "user", "content": message})
+        history.append({"role": "assistant", "content": error_msg})
         return "", history
 
 def clear_history():
@@ -163,20 +169,25 @@ def clear_history():
 # Initialize search engine
 search_engine = SearchEngine()
 
-async def search_knowledge(query: str) -> str:
+def search_knowledge(query: str) -> str:
     """Perform a search and return formatted results"""
     try:
-        return await search_engine.get_knowledge(query)
+        # Check if the search engine has async method and handle it
+        if hasattr(search_engine, 'get_knowledge'):
+            result = search_engine.get_knowledge(query)
+            # If it returns a coroutine, we can't use it in sync context
+            if hasattr(result, '__await__'):
+                logger.warning("Search engine returned async result, using fallback")
+                return f"Search query: '{query}' - Please try again"
+            return result
+        else:
+            return f"Search engine not available. Query: '{query}'"
     except Exception as e:
         logger.error(f"Search error: {e}")
         return f"I encountered an error while searching: {str(e)}"
 
-def sync_search(query: str) -> str:
-    """Synchronous wrapper for search function"""
-    return asyncio.run(search_knowledge(query))
-
 # Create the Gradio interface with improved chat components and search
-with gr.Blocks(title="Codette", theme=gr.themes.Soft()) as iface:
+with gr.Blocks(title="Codette") as iface:
     gr.Markdown("""# 🤖 Codette
     Your AI programming assistant with chat and search capabilities.""")
     
@@ -185,7 +196,6 @@ with gr.Blocks(title="Codette", theme=gr.themes.Soft()) as iface:
             chatbot = gr.Chatbot(
                 [],
                 elem_id="chatbot",
-                bubble_full_width=False,
                 avatar_images=("👤", "🤖"),
                 height=500,
                 show_label=False,
@@ -256,82 +266,37 @@ with gr.Blocks(title="Codette", theme=gr.themes.Soft()) as iface:
             search_output = gr.Markdown()
             
             # Set up search event handlers
-            search_btn.click(sync_search, search_input, search_output)
-            search_input.submit(sync_search, search_input, search_output)
-# Run the Gradio interface with proper async handling
-async def shutdown():
-    """Cleanup function for graceful shutdown"""
-    try:
-        # Save final quantum state if available
-        if hasattr(ai_core, 'cocoon_manager') and ai_core.cocoon_manager:
-            try:
-                ai_core.cocoon_manager.save_cocoon({
-                    "type": "shutdown",
-                    "quantum_state": ai_core.quantum_state
-                })
-                logger.info("Final quantum state saved")
-            except Exception as e:
-                logger.error(f"Error saving final quantum state: {e}")
-        
-        # Shutdown AI core
-        try:
-            await ai_core.shutdown()
-            logger.info("AI Core shutdown complete")
-        except Exception as e:
-            logger.error(f"Error shutting down AI Core: {e}")
-            
-        # Clear CUDA cache if GPU was used
-        if torch.cuda.is_available():
-            try:
-                torch.cuda.empty_cache()
-                logger.info("CUDA cache cleared")
-            except Exception as e:
-                logger.error(f"Error clearing CUDA cache: {e}")
-                
-    except Exception as e:
-        logger.error(f"Error during shutdown: {e}")
-        raise
+            search_btn.click(search_knowledge, search_input, search_output)
+            search_input.submit(search_knowledge, search_input, search_output)
 
+# Run the Gradio interface
 if __name__ == "__main__":
     try:
-        # Set up exception handling
-        def handle_exception(loop, context):
-            msg = context.get("exception", context["message"])
-            logger.error(f"Caught exception: {msg}")
-            
-        # Set up asyncio event loop with proper error handling
-        loop = asyncio.new_event_loop()
-        loop.set_exception_handler(handle_exception)
-        asyncio.set_event_loop(loop)
-        
-        # Launch Gradio interface
+        # Launch Gradio interface - let Gradio handle event loop
         iface.queue().launch(
-            prevent_thread_lock=True,
             share=False,
-            server_name="127.0.0.1",
-            show_error=True
+            server_name="0.0.0.0",
+            server_port=7860,
+            show_error=True,
+            theme=gr.themes.Soft()
         )
-        
-        try:
-            # Keep the main loop running
-            loop.run_forever()
-        except Exception as e:
-            logger.error(f"Error in main loop: {e}")
-            traceback.print_exc()
     except KeyboardInterrupt:
         logger.info("Shutting down gracefully...")
         try:
-            loop.run_until_complete(shutdown())
+            # Save final quantum state if available
+            if hasattr(ai_core, 'cocoon_manager') and ai_core.cocoon_manager:
+                try:
+                    ai_core.cocoon_manager.save_cocoon({
+                        "type": "shutdown",
+                        "quantum_state": ai_core.quantum_state
+                    })
+                    logger.info("Final quantum state saved")
+                except Exception as e:
+                    logger.error(f"Error saving final quantum state: {e}")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
-    finally:
-        try:
-            tasks = asyncio.all_tasks(loop)
-            for task in tasks:
-                task.cancel()
-            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-            loop.close()
-        except Exception as e:
-            logger.error(f"Error closing loop: {e}")
-            sys.exit(1)
         sys.exit(0)
+    except Exception as e:
+        logger.error(f"Error launching Gradio interface: {e}")
+        traceback.print_exc()
+        sys.exit(1)

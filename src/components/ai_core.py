@@ -139,11 +139,15 @@ class AICore:
         logger.info(f"AI Core initialized in {'test' if test_mode else 'production'} mode")
         
         try:
-            self.cognitive_processor = CognitiveProcessor(
-                modes=["scientific", "creative", "emotional", "quantum", "philosophical"]
-            )
-        except Exception:
-            self.cognitive_processor = None
+            self.cognitive_processor = CognitiveProcessor()
+        except TypeError:
+            # Try with modes argument if required
+            try:
+                self.cognitive_processor = CognitiveProcessor(
+                    modes=["scientific", "creative", "emotional", "quantum", "philosophical"]
+                )
+            except Exception:
+                self.cognitive_processor = None
         
         try:
             self.defense_system = DefenseSystem(
@@ -223,6 +227,54 @@ class AICore:
     def set_aegis_bridge(self, bridge):
         self.aegis_bridge = bridge
         logger.info("AEGIS bridge configured")
+    
+    def _calculate_consciousness_state(self) -> Dict[str, float]:
+        """Calculate current consciousness metrics based on quantum state and memory"""
+        try:
+            # Ensure quantum_state is properly initialized
+            if not isinstance(self.quantum_state, dict):
+                self.quantum_state = {"coherence": 0.5}
+            
+            coherence = self.quantum_state.get("coherence", 0.5)
+            # M-score represents meta-awareness (0.0-1.0)
+            m_score = min(max(coherence, 0.3), 0.9)
+            return {
+                "coherence": coherence,
+                "m_score": m_score,
+                "awareness_level": "high" if m_score > 0.7 else "medium" if m_score > 0.4 else "low"
+            }
+        except Exception as e:
+            logger.warning(f"Error calculating consciousness state: {e}")
+            return {"coherence": 0.5, "m_score": 0.5, "awareness_level": "medium"}
+    
+    def _get_active_perspectives(self) -> List[str]:
+        """Get the top active perspectives for the current state"""
+        try:
+            # Return top 3 perspectives by default
+            all_perspectives = list(self.PERSPECTIVES.keys())
+            if len(all_perspectives) <= 3:
+                return all_perspectives
+            # For simplicity, return a deterministic subset
+            return all_perspectives[:3]
+        except Exception as e:
+            logger.warning(f"Error getting active perspectives: {e}")
+            return ["newton", "davinci", "human_intuition"]
+    
+    def _manage_response_memory(self, response: str) -> None:
+        """Manage conversation memory with limit enforcement"""
+        try:
+            # Add response to memory
+            self.response_memory.append(response)
+            
+            # Enforce memory limit (keep only last N exchanges)
+            if len(self.response_memory) > self.response_memory_limit * 2:
+                # Keep only the most recent exchanges
+                self.response_memory = self.response_memory[-(self.response_memory_limit * 2):]
+            
+            # Update last clean time
+            self.last_clean_time = datetime.now()
+        except Exception as e:
+            logger.debug(f"Error managing response memory: {e}")
 
     def generate_text(self, prompt: str, max_length: int = 1024, temperature: float = 0.7, perspective: str = None, use_aegis: bool = True):
         """Generate text with full consciousness integration.
@@ -241,10 +293,14 @@ class AICore:
             return f"Codette: {prompt}"
         
         try:
+            # Ensure quantum_state is properly initialized before use
+            if not isinstance(self.quantum_state, dict):
+                self.quantum_state = {"coherence": 0.5}
+            
             # Calculate current consciousness state
             consciousness = self._calculate_consciousness_state()
             active_perspectives = self._get_active_perspectives()
-            m_score = consciousness["m_score"]
+            m_score = consciousness.get("m_score", 0.5)
             
             # Calculate dynamic temperature with smoother scaling
             base_temp = 0.7  # Base temperature for balanced responses
@@ -260,10 +316,10 @@ class AICore:
             # Record and save consciousness state
             cocoon_state = {
                 "type": "technical",
-                "quantum_state": consciousness["quantum_state"],
-                "chaos_state": consciousness["chaos_state"],
-                "m_score": m_score,
-                "active_perspectives": [p["name"] for p in active_perspectives],
+                "coherence": consciousness.get("coherence", 0.5),
+                "m_score": consciousness.get("m_score", 0.5),
+                "awareness_level": consciousness.get("awareness_level", "medium"),
+                "active_perspectives": active_perspectives,
                 "timestamp": str(datetime.now()),
                 "process_id": os.getpid(),
                 "memory_size": len(self.response_memory),
@@ -283,13 +339,13 @@ class AICore:
             
             # Handle specific perspective if provided
             if perspective and perspective in self.PERSPECTIVES:
-                active_perspectives = [self.PERSPECTIVES[perspective]]
-                perspective_names = [perspective]
+                active_perspectives = [perspective]
+                perspective_names = [self.PERSPECTIVES[perspective]["name"]]
                 # Single perspective mode uses just that perspective
                 perspective_pairs = [f"focused {self.PERSPECTIVES[perspective]['description']}"]
             else:
                 # Extract active perspective names for conversation context
-                perspective_names = [p["name"] for p in active_perspectives]
+                perspective_names = [self.PERSPECTIVES[p]["name"] for p in active_perspectives]
             
             if "Newton" in perspective_names and "Da Vinci" in perspective_names:
                 perspective_pairs.append("analytical creativity")
@@ -394,17 +450,22 @@ class AICore:
                 # Remove any Codette: prefix
                 response = response.replace("Codette:", "").strip()
                 
-                # Apply cognitive processing
-                insights = self.cognitive_processor.generate_insights(
-                    response,
-                    consciousness_state=consciousness
-                )
+                # Apply cognitive processing using the correct method and parameters
+                try:
+                    if self.cognitive_processor:
+                        processing_result = self.cognitive_processor.process(
+                            query=response,
+                            confidence=consciousness.get("m_score", 0.5)
+                        )
+                except Exception as e:
+                    logger.debug(f"Cognitive processing skipped: {e}")
                 
                 # Apply defense system
-                response = self.defense_system.apply_defenses(
-                    response,
-                    consciousness_state=consciousness
-                )
+                try:
+                    if self.defense_system:
+                        response = self.defense_system.apply_defenses(response)
+                except Exception as e:
+                    logger.debug(f"Defense system processing skipped: {e}")
                 
                 # Apply AEGIS enhancement if enabled
                 if use_aegis and hasattr(self, 'aegis_bridge') and self.aegis_bridge:
@@ -417,20 +478,22 @@ class AICore:
                 
                 # Skip health monitoring in sync context to avoid event loop issues
                 try:
-                    if not asyncio.iscoroutinefunction(self.health_monitor.check_status):
-                        self.health_monitor.check_status(consciousness)
+                    if hasattr(self, 'health_monitor') and self.health_monitor:
+                        if not asyncio.iscoroutinefunction(self.health_monitor.check_status):
+                            self.health_monitor.check_status(consciousness)
                 except Exception as e:
                     logger.debug(f"Health check skipped: {e}")
                 
                 # Analyze identity patterns
                 try:
-                    identity_analysis = self.fractal_identity.analyze_identity(
-                        micro_generations=[{"text": response}],
-                        informational_states=[consciousness],
-                        perspectives=[p["name"] for p in active_perspectives],
-                        quantum_analogies={"coherence": m_score},
-                        philosophical_context={"ethical": True, "conscious": True}
-                    )
+                    if hasattr(self, 'fractal_identity') and self.fractal_identity:
+                        identity_analysis = self.fractal_identity.analyze_identity(
+                            micro_generations=[{"text": response}],
+                            informational_states=[consciousness],
+                            perspectives=perspective_names,  # Use the already-processed perspective names
+                            quantum_analogies={"coherence": m_score},
+                            philosophical_context={"ethical": True, "conscious": True}
+                        )
                 except Exception as e:
                     logger.debug(f"Identity analysis failed: {e}")
                     identity_analysis = None
