@@ -492,10 +492,10 @@ python app.py  # http://localhost:7860
 python codette_api.py  # Custom REST wrapper
 ```
 
-### Llama-3 (Codette_final)
+### Llama-3.2 (Codette_final)
 ```bash
 # Requires Ollama installed
-ollama run llama3
+ollama run Codette
 # Then run Codette_final which connects to Ollama
 python Codette_final/main.py
 ```
