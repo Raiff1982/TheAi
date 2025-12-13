@@ -1,0 +1,24 @@
+{
+    "project": "Codette Core Universal Files",
+    "parts": [
+        {
+            "name": "Codette_Core_Universal_Files_Part1.zip",
+            "part": 1,
+            "sha256": "04dee33931aa51013922fe5a4bba9618376bce0ce823e1b05ce34a4c3de72c97"
+        },
+        {
+            "name": "Codette_Core_Universal_Files_Part2.zip",
+            "part": 2,
+            "sha256": "2700bffb8c3b6bb256ee718ae98d439b2847d0573b5e78b9840fea5cc478f9d0"
+        },
+        {
+            "name": "Codette_Core_Universal_Files_Part3.zip",
+            "part": 3,
+            "sha256": "05d52d7546ae113a10ec88b344ec0125f8960bf1d8c45748371760b7ae310d2f"
+        }
+    ],
+    "author": "Jonathan Harrison",
+    "description": "Core reasoning, ethics, optimization, and cognitive modules from the Codette framework.",
+    "format": "ZIP (split)",
+    "license": "Sovereign Innovation License"
+}

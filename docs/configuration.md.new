@@ -1,0 +1,203 @@
+# Codette Configuration Guide
+
+## Core Configuration
+
+### Environment Variables
+```bash
+# Core settings
+PYTHONPATH="path/to/Codette/src"
+LOG_LEVEL="INFO"  # DEBUG, INFO, WARNING, ERROR
+
+# API tokens (optional)
+HUGGINGFACEHUB_API_TOKEN="your_token"
+```
+
+### System Configuration (`config.json`)
+```json
+{
+    "host": "127.0.0.1",
+    "port": 8000,
+    "model_name": "gpt2-large",
+    "quantum_fluctuation": 0.07,
+    "spiderweb_dim": 5,
+    "recursion_depth": 4,
+    "perspectives": [
+        "Newton",
+        "DaVinci",
+        "Ethical",
+        "Quantum",
+        "Memory"
+    ]
+}
+```
+
+## Quantum System Configuration
+
+### Spiderweb Parameters
+- `node_count`: 128 (default)
+- `activation_threshold`: 0.3
+- `dimensions`: ['Ψ', 'τ', 'χ', 'Φ', 'λ']
+
+### Perspective Settings
+```python
+PERSPECTIVES = {
+    "newton": {
+        "name": "Newton",
+        "description": "analytical and mathematical perspective",
+        "prefix": "Analyzing this logically and mathematically:",
+        "temperature": 0.3
+    },
+    "davinci": {
+        "name": "Da Vinci", 
+        "description": "creative and innovative perspective",
+        "prefix": "Considering this with artistic and innovative insight:",
+        "temperature": 0.9
+    },
+    # ... other perspectives
+}
+```
+
+### Quantum State Configuration
+```python
+quantum_state = {
+    "coherence": 0.5,          # Base quantum coherence
+    "fluctuation": 0.07,       # Random fluctuation range
+    "spiderweb_dim": 5,        # Number of dimensions
+    "recursion_depth": 4,      # Max recursion in processing
+    "perspectives": [...]      # Active perspectives
+}
+```
+
+## Memory System Configuration
+
+### Cocoon Settings
+```python
+COCOON_CONFIG = {
+    "base_dir": "./cocoons",      # Cocoon storage directory
+    "max_cocoons": 1000,          # Maximum stored cocoons
+    "cleanup_interval": 3600,     # Cleanup interval (seconds)
+    "encryption": True            # Enable encryption
+}
+```
+
+### History Settings
+```python
+HISTORY_CONFIG = {
+    "max_length": 10,             # Max conversation history
+    "context_window": 5,          # Context window size
+    "min_confidence": 0.3,        # Min confidence threshold
+    "max_recursion": 3            # Max processing recursion
+}
+```
+
+## Pattern System Configuration
+
+### Pattern Categories
+```python
+PATTERN_CATEGORIES = {
+    "thinking": {
+        "frequency": 0.7,         # Usage frequency
+        "context_required": True   # Context sensitivity
+    },
+    "follow_up": {
+        "frequency": 0.5,
+        "context_required": False
+    },
+    "transition": {
+        "frequency": 0.3,
+        "context_required": True
+    }
+}
+```
+
+### Response Integration
+```python
+RESPONSE_CONFIG = {
+    "max_length": 500,            # Max response length
+    "min_confidence": 0.3,        # Min confidence threshold
+    "pattern_chance": 0.15,       # Pattern inclusion chance
+    "transition_threshold": 2      # Min perspectives for transition
+}
+```
+
+## Advanced Settings
+
+### Model Configuration
+Supported models in fallback chain:
+1. Mistral-7B-Instruct
+   - 8-bit quantization
+   - fp16 precision
+   - 16GB+ VRAM required
+
+2. Phi-2
+   - fp16 precision
+   - 8GB+ VRAM required
+
+3. GPT-2
+   - Base configuration
+   - Minimal requirements
+
+### Performance Tuning
+```python
+PERFORMANCE_CONFIG = {
+    "batch_size": 1,              # Processing batch size
+    "max_workers": 4,             # Max concurrent workers
+    "cache_size": 1000,           # Pattern cache size
+    "cleanup_threshold": 0.8      # Memory cleanup threshold
+}
+```
+
+### Debug Configuration
+```python
+DEBUG_CONFIG = {
+    "verbose_logging": False,     # Detailed logging
+    "trace_quantum": False,       # Quantum state tracing
+    "save_tensors": False,        # Save tension states
+    "profile_memory": False       # Memory profiling
+}
+```
+
+## Example Configurations
+
+### Basic Setup
+```json
+{
+    "host": "127.0.0.1",
+    "port": 8000,
+    "quantum_fluctuation": 0.07,
+    "spiderweb_dim": 5,
+    "perspectives": ["Newton", "DaVinci", "Ethical"]
+}
+```
+
+### Advanced Setup
+```json
+{
+    "host": "127.0.0.1",
+    "port": 8000,
+    "quantum_fluctuation": 0.07,
+    "spiderweb_dim": 5,
+    "recursion_depth": 4,
+    "perspectives": [
+        "Newton",
+        "DaVinci",
+        "Ethical",
+        "Quantum",
+        "Memory"
+    ],
+    "advanced_features": {
+        "pattern_integration": true,
+        "quantum_enhancement": true,
+        "memory_persistence": true,
+        "dynamic_confidence": true
+    },
+    "memory_config": {
+        "max_cocoons": 1000,
+        "cleanup_interval": 3600
+    },
+    "pattern_config": {
+        "use_transitions": true,
+        "pattern_frequency": 0.15
+    }
+}
+```

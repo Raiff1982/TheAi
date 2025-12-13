@@ -1,0 +1,47 @@
+{
+  "model_name": "bigscience/bloomz-560m",
+  "logging_enabled": true,
+  "log_level": "INFO",
+  "enabled_perspectives": [
+    "newton",
+    "davinci", 
+    "human_intuition",
+    "neural_network",
+    "quantum_computing",
+    "resilient_kindness",
+    "mathematical",
+    "philosophical",
+    "copilot",
+    "bias_mitigation",
+    "psychological"
+  ],
+  "ethical_considerations": "Always act with transparency, kindness, and recursive wisdom. Prioritize human wellbeing and understanding over efficiency.",
+  "enable_response_saving": true,
+  "response_save_path": "responses.txt",
+  "backup_responses": {
+    "enabled": true,
+    "backup_path": "backup_responses.txt"
+  },
+  "safety_thresholds": {
+    "memory": 85,
+    "cpu": 90,
+    "response_time": 2.0
+  },
+  "perspectives": ["newton", "davinci", "quantum", "emotional", "futuristic"],
+  "max_retries": 3,
+  "max_input_length": 4096,
+  "max_response_length": 1024,
+  "defense_strategies": ["evasion", "adaptability", "barrier"],
+  "cognitive_modes": ["scientific", "creative", "emotional"],
+  "quantum_simulation": {
+    "default_cores": 4,
+    "max_cores": 16,
+    "simulation_types": ["quantum_chaos", "quantum_only", "chaos_only", "cosmic_entropy"]
+  },
+  "web_interface": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": true,
+    "cors_enabled": true
+  }
+}

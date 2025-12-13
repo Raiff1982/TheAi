@@ -1,0 +1,15 @@
+{
+  "host": "127.0.0.1",
+  "port": 8000,
+  "model_name": "gpt2-large",
+  "quantum_fluctuation": 0.07,
+  "spiderweb_dim": 5,
+  "recursion_depth": 4,
+  "perspectives": [
+    "Newton",
+    "DaVinci",
+    "Ethical",
+    "Quantum",
+    "Memory"
+  ]
+}

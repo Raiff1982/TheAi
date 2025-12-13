@@ -1,0 +1,5 @@
+{
+  "frequency": 440,
+  "agents": 3,
+  "intent_coefficient": 0.7
+}
