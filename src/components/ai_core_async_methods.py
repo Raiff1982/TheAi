@@ -186,34 +186,30 @@ def _generate_model_response(self, prompt: str) -> str:
             
         # Filter out system messages and protected content (minimal filtering)
         system_markers = [
-            '[Protected:', '[System:', ']',  # Only strict tags, not general markers
+            '[Protected:', '[System:', '[System:',  # Only specific tags
         ]
         
         lines = response.split('\n')
         filtered_lines = []
         for line in lines:
-            # Skip lines with system markers
+            # Only skip lines with actual system markers (be lenient)
             if any(marker in line for marker in system_markers):
                 continue
-            # Skip generic thank you messages
-            # (removed - allow all content unless explicitly marked)
-            
+            # Otherwise keep the line
             filtered_lines.append(line)
             
-        response = ' '.join(filtered_lines).strip()
+        response = '\n'.join(filtered_lines).strip()  # Use newline join, not space
         
-        # If we filtered everything out, provide a default response
-        if not response:
+        # Return whatever we got (don't replace with default unless truly empty)
+        if response.strip():
+            # Clean up any remaining character dialogues
+            if ':' in response:
+                parts = response.split(':', 1)
+                speaker = parts[0].lower().strip()
+                if speaker == 'codette':
+                    response = parts[1].strip()
+        else:
             response = "I am Codette, an AI programming assistant. How can I help with your development tasks?"
-            
-        # Clean up any remaining character dialogues
-        if ':' in response:
-            parts = response.split(':', 1)
-            speaker = parts[0].lower().strip()
-            if speaker == 'codette':
-                response = parts[1].strip()
-                
-        # Allow all responses (removed fictional marker filtering)
         
         return response.strip()
         
