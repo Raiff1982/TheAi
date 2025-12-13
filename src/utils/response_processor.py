@@ -1,18 +1,29 @@
 from typing import Dict, Any, List, Optional
+import time
 from knowledge_base.grounding_truth import GroundingTruth
+
+# Try to import generic responder for multi-perspective optimization
+try:
+    from codette_responder_generic import get_generic_responder
+    GENERIC_RESPONDER_AVAILABLE = True
+except ImportError:
+    GENERIC_RESPONDER_AVAILABLE = False
 
 class ResponseProcessor:
     """
     Processes and verifies AI responses using the grounding truth system
+    and optimizes perspective selection with the generic responder
     """
     
     def __init__(self):
         self.grounding_truth = GroundingTruth()
         self.context_history = []
+        self.generic_responder = get_generic_responder() if GENERIC_RESPONDER_AVAILABLE else None
+        self.user_id = "anonymous"  # Can be set per session
         
     def process_response(self, query: str, response: str, context: Optional[str] = None) -> str:
         """
-        Process and verify a response using grounding truth
+        Process and verify a response using grounding truth and multi-perspective optimization
         
         Args:
             query: The original user query
@@ -22,6 +33,20 @@ class ResponseProcessor:
         Returns:
             Processed and verified response
         """
+        # Analyze query with generic responder to understand domain and select perspectives
+        perspective_analysis = None
+        if self.generic_responder:
+            try:
+                perspective_analysis = self.generic_responder.generate_response(
+                    query, user_id=self.user_id
+                )
+                # Attach perspective information to response for later use
+                if perspective_analysis.get("perspectives"):
+                    response = self._enhance_with_perspectives(response, perspective_analysis["perspectives"])
+            except Exception as e:
+                # Generic responder is optional; if it fails, continue processing
+                pass
+        
         # Split response into statements for verification
         statements = self._split_into_statements(response)
         
@@ -45,6 +70,21 @@ class ResponseProcessor:
         )
         
         return processed_response
+        
+    def _enhance_with_perspectives(self, response: str, perspectives: List[Dict]) -> str:
+        """
+        Enhance response with multi-perspective annotations
+        
+        Args:
+            response: The original response
+            perspectives: List of perspective dicts from generic responder
+            
+        Returns:
+            Response with perspective context (optional enhancement)
+        """
+        # Optional: Add subtle perspective indicators to response
+        # For now, just return original response; perspectives are used for learning
+        return response
         
     def _split_into_statements(self, response: str) -> List[str]:
         """Split response into verifiable statements"""
@@ -119,3 +159,42 @@ class ResponseProcessor:
         # Keep only recent context
         if len(self.context_history) > 10:
             self.context_history.pop(0)
+    
+    def record_response_feedback(self, query: str, category: str, perspective: str, rating_value: int = 3) -> Dict[str, Any]:
+        """
+        Record user feedback on response for learning system
+        
+        Args:
+            query: The original query
+            category: The detected response category
+            perspective: The perspective used
+            rating_value: User rating (0-4, where 4 is best)
+            
+        Returns:
+            Feedback confirmation and learning status
+        """
+        if not self.generic_responder:
+            return {"status": "learning_disabled", "message": "Generic responder not available"}
+        
+        try:
+            from codette_responder_generic import UserRating
+            
+            # Map rating value to UserRating enum
+            rating_map = {0: UserRating.UNHELPFUL, 1: UserRating.SLIGHTLY_HELPFUL, 
+                         2: UserRating.HELPFUL, 3: UserRating.VERY_HELPFUL, 
+                         4: UserRating.EXACTLY_WHAT_NEEDED}
+            rating = rating_map.get(rating_value, UserRating.HELPFUL)
+            
+            # Record feedback
+            feedback_result = self.generic_responder.record_user_feedback(
+                user_id=self.user_id,
+                response_id=f"{query[:20]}_{int(time.time())}",
+                category=category,
+                perspective=perspective,
+                rating=rating
+            )
+            
+            return feedback_result
+            
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
