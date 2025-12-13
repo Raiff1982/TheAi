@@ -21,7 +21,10 @@ class AgileAGIFunctionality:
         self.learning_capabilities = learning_capabilities
         self.action_execution = action_execution
         self.ethical_alignment = ethical_alignment
-        self.cognitive_processor = CognitiveProcessor(cognitive_modes)
+        try:
+            self.cognitive_processor = CognitiveProcessor(modes=cognitive_modes)
+        except TypeError:
+            self.cognitive_processor = CognitiveProcessor()
 
     def analyze_learning_capabilities(self):
         return {

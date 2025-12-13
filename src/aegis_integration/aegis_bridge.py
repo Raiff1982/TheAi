@@ -34,7 +34,10 @@ from .aegis import AegisCouncil, MetaJudgeAgent, TemporalAgent, VirtueAgent
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
-from ai_core import AICore
+try:
+    from components.ai_core import AICore
+except ImportError:
+    from src.components.ai_core import AICore
 
 class AegisBridge:
     def __init__(self, ai_core: AICore, config: Dict[str, Any]):
@@ -226,7 +229,10 @@ from .aegis import AegisCouncil, MetaJudgeAgent, TemporalAgent, VirtueAgent
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
-from ai_core import AICore
+try:
+    from components.ai_core import AICore
+except ImportError:
+    from src.components.ai_core import AICore
 
 class AegisBridge:
     def __init__(self, ai_core: AICore, config: Dict[str, Any]):
@@ -383,3 +389,6 @@ class AegisBridge:
         """
 
         return self.council.memory.audit()
+
+
+

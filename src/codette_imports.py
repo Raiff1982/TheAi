@@ -169,9 +169,12 @@ class CodetteImportManager:
                     codette.quantum_web = QuantumSpiderweb(node_count=128)
                     
                 if self.available_modules["cognitive"]["processor"]:
-                    codette.cognitive_processor = CognitiveProcessor(
-                        modes=["scientific", "creative", "emotional", "quantum"]
-                    )
+                    try:
+                        codette.cognitive_processor = CognitiveProcessor(
+                            modes=["scientific", "creative", "emotional", "quantum"]
+                        )
+                    except TypeError:
+                        codette.cognitive_processor = CognitiveProcessor()
                     
                 return codette
             else:

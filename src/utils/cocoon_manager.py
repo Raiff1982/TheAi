@@ -119,6 +119,9 @@ class CocoonManager:
             
     def get_latest_quantum_state(self) -> Dict[str, float]:
         """Get the most recent quantum state"""
+        # Ensure quantum_state is always a proper dict
+        if not isinstance(self.quantum_state, dict):
+            self.quantum_state = {"coherence": 0.5}
         return self.quantum_state.copy()
         
     def get_latest_cocoons(self, limit: int = 5) -> List[Dict[str, Any]]:
