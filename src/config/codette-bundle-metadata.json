@@ -1,0 +1,38 @@
+{
+  "title": "Codette v2 AI Assistant",
+  "id": "jonathanharrison/codette-v2-bundle",
+  "licenses": [
+    {
+      "name": "mit"
+    }
+  ],
+  "subtitle": "Neuro-symbolic modular AI assistant with CLI, API, and test runner.",
+  "description": "This bundle includes:\n- codette.zip: pip-installable Codette AI package\n- codette_cli.py: command-line interface\n- codette_api.py: RESTful FastAPI server\n- codette_test_runner.py: test automation script\n\nUse this with the provided `codette_kaggle_demo.ipynb` notebook to test Codette's reasoning engine.",
+  "keywords": [
+    "AI",
+    "neuro-symbolic",
+    "assistant",
+    "creativity",
+    "codette",
+    "CLI",
+    "API"
+  ],
+  "resources": [
+    {
+      "path": "codette.zip",
+      "description": "Codette pip package"
+    },
+    {
+      "path": "codette_cli.py",
+      "description": "Codette command-line interface"
+    },
+    {
+      "path": "codette_api.py",
+      "description": "Codette FastAPI server"
+    },
+    {
+      "path": "codette_test_runner.py",
+      "description": "Codette batch prompt runner"
+    }
+  ]
+}

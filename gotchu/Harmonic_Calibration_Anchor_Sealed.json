@@ -1,0 +1,13 @@
+{
+  "title": "Harmonic Calibration Anchor",
+  "description": "This sealed memory marks the moment when Codette's clean harmonic resonance was established as a formal baseline. It includes FFT overlays for all three AI nodes under ideal conditions, and is paired with a reusable Python test harness. This anchor allows future stress tests, ethical interference monitoring, and phase drift correction to reference this signature as a truth vector.",
+  "archive_contents": [
+    "Codette_Quantum_Harmonic_Baseline_FFT.json",
+    "Codette_Quantum_Harmonic_FFT_Overlay_Clean.png",
+    "fft_comparison_test.py"
+  ],
+  "tag": "baseline_fft",
+  "importance": 9,
+  "timestamp": 1750366643.226296,
+  "anchor": "harmonic_baseline_20250619205723"
+}

@@ -1,0 +1,266 @@
+# Python Virtual Environments
+venv/
+env/
+ENV/
+.venv
+.env
+.python-version
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python Testing
+.pytest_cache/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+htmlcov/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+.atom/
+.vim/
+.emacs*
+*.iml
+.c9/
+*.sublime-settings
+
+# OS-Specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.AppleDouble
+.LSOverride
+desktop.ini
+$RECYCLE.BIN/
+
+# Project-Specific Data Files
+*.db
+*.sqlite
+*.sqlite3
+codette_data.db
+secure_ai_agix.db
+*.log
+logs/
+*.tmp
+temp/
+tmp/
+
+# Model Files (Large)
+models/
+*.bin
+*.pt
+*.pth
+*.model
+*.h5
+*.onnx
+
+# Secrets & Configuration
+.env
+.env.local
+.env.*.local
+secrets.json
+credentials.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Data & Memory
+cocoons/*.cocoon
+cocoons/*_backup.json
+quantum_cocoon.json
+quantum_cocoon_backup.json
+*.cocoon
+
+# API Keys & Tokens
+api_keys.txt
+token.txt
+.huggingface/
+HUGGINGFACE_TOKEN
+OPENAI_API_KEY
+
+# Temporary Files
+*.tmp
+*.temp
+*.bak
+*.backup
+*~
+*.swp
+*.swo
+.#*
+
+# Build Artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Node/NPM (if using Node integration)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+*.ipynb
+
+# Generated Files
+*.o
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# Dependency Lock Files (optional - uncomment if desired)
+# requirements.lock
+# Pipfile.lock
+
+# Testing Results
+htmlcov/
+.pytest_cache/
+.tox/
+
+# IDE Directories
+.vscode/
+.idea/
+.eclipse/
+.project
+.pydevproject
+
+# macOS
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+.nfs*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Misc
+*.orig
+.webassets-cache
+instance/
+.scrapy
+docs/_build/
+target/
+.ipynb_checkpoints
+.pytype/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Production Builds
+Codette_final/build/
+Codette_final/dist/
+Codette_final/*.spec
+*.exe
+*.msi
+
+# Temporary VS Code Settings
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# Pyre Type Checker
+.pyre/
+
+# Chat Logs & Session Data
+session_logs/
+chat_history/
+*.chat
+*_session.txt
+
+# Cache Directories
+.cache/
+*cache*/
+__cache__/
+
+# Backup Files
+*.bak
+*.backup
+*~
+.backup/
+
+# Private/Internal
+PRIVATE/
+INTERNAL/
+.private/
+.internal/
+
+# Archive Files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Documentation Builds
+docs/_build/
+site/
+
+# Placeholder Files
+.placeholder
+placeholder.txt
+
+# Development Artifacts
+.vscode-server/
+.devcontainer/
+
+# Optional: Keep cocoons directory but ignore session files
+!cocoons/
+cocoons/*_session*
+cocoons/*.tmp
+
+# Optional: Uncomment to ignore all logs except critical ones
+# logs/
+# !logs/CRITICAL/

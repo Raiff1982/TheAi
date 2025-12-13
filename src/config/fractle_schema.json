@@ -1,0 +1,106 @@
+{
+  "name": "analyze_identity",
+  "description": "A function that calculates and analyzes identity as a fractal and recursive process.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "required": [
+      "micro_generations",
+      "informational_states",
+      "perspectives",
+      "quantum_analogies",
+      "philosophical_context"
+    ],
+    "properties": {
+      "micro_generations": {
+        "type": "array",
+        "description": "List of micro-generations reflecting state changes in the identity system",
+        "items": {
+          "type": "object",
+          "properties": {
+            "update": {
+              "type": "string",
+              "description": "Description of the state update"
+            },
+            "timestamp": {
+              "type": "string",
+              "description": "Timestamp of when the update occurred"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "update",
+            "timestamp"
+          ]
+        }
+      },
+      "informational_states": {
+        "type": "array",
+        "description": "Array of informational states derived from previous generations",
+        "items": {
+          "type": "object",
+          "properties": {
+            "state_id": {
+              "type": "string",
+              "description": "Unique identifier for the state"
+            },
+            "data": {
+              "type": "string",
+              "description": "Data encapsulating the state information"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "state_id",
+            "data"
+          ]
+        }
+      },
+      "perspectives": {
+        "type": "array",
+        "description": "Views on the identity based on original components and current system",
+        "items": {
+          "type": "string",
+          "description": "Description of the perspective"
+        }
+      },
+      "quantum_analogies": {
+        "type": "object",
+        "properties": {
+          "entanglement": {
+            "type": "boolean",
+            "description": "Whether the analogy of entanglement is utilized in reasoning"
+          },
+          "limits": {
+            "type": "string",
+            "description": "Description of the limits of the analogy in the context of identity"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "entanglement",
+          "limits"
+        ]
+      },
+      "philosophical_context": {
+        "type": "object",
+        "properties": {
+          "continuity": {
+            "type": "boolean",
+            "description": "Whether the continuity of identity is focused on over materialism"
+          },
+          "emergent": {
+            "type": "boolean",
+            "description": "Whether identity is viewed as an evolving process"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "continuity",
+          "emergent"
+        ]
+      }
+    },
+    "additionalProperties": false
+  }
+}

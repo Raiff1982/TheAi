@@ -1,0 +1,23 @@
+{
+  "id": "jonathanharrison/codette-v2-demo",
+  "title": "Codette v2 Demo: Neuro-Symbolic AI Assistant",
+  "code_file": "codette_kaggle_demo.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": false,
+  "enable_internet": false,
+  "dataset_sources": [
+    "jonathanharrison/codette-v2-bundle"
+  ],
+  "keywords": [
+    "AI",
+    "Codette",
+    "Assistant",
+    "Neuro-Symbolic",
+    "Creativity"
+  ],
+  "subtitle": "Test and explore Codette's reasoning engine using bundled CLI, API, and test runners.",
+  "description": "This notebook walks you through how to install and interact with the Codette AI system, a neuro-symbolic assistant that blends creativity, symbolic reasoning, and ethical filtering.\\n\\nIt leverages the pip-installable Codette package and demonstrates interactive queries and batch processing.\\nTo use it, simply run each cell in order.",
+  "license": "mit"
+}

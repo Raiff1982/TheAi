@@ -1,0 +1,70 @@
+{
+  "name": "prevent_model_collapse",
+  "description": "Preemptive safeguard against model collapse, ensuring consistent learning and retention of data integrity across model generations.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "required": [
+      "initial_data",
+      "training_steps",
+      "model_capacities",
+      "sampling_method"
+    ],
+    "properties": {
+      "initial_data": {
+        "type": "array",
+        "description": "The initial clean data used for training the first model (model 0).",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "Text data sample that will be used for training."
+            },
+            "label": {
+              "type": "string",
+              "description": "Label associated with the data sample."
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "label"
+          ]
+        }
+      },
+      "training_steps": {
+        "type": "number",
+        "description": "Number of iterations for training the models to evaluate convergence and performance."
+      },
+      "model_capacities": {
+        "type": "object",
+        "required": [
+          "max_samples",
+          "memory_limit"
+        ],
+        "properties": {
+          "max_samples": {
+            "type": "number",
+            "description": "Maximum number of samples to retain for each model's training dataset."
+          },
+          "memory_limit": {
+            "type": "number",
+            "description": "Memory limit for training each individual model."
+          }
+        },
+        "additionalProperties": false
+      },
+      "sampling_method": {
+        "type": "string",
+        "description": "Method used for data sampling during each training phase.",
+        "enum": [
+          "Monte_Carlo",
+          "stratified",
+          "random"
+        ]
+      }
+    },
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+    "verified_on": "2025-08-02T01:59:24.615223Z",
+    "files": [
+        {
+            "file": "ai_core.py",
+            "sha256_base64": "W9J1eSZ23K1GNWcv/nb6c25jZBjxmKuY3cFYKrr6v9o="
+        },
+        {
+            "file": "aegis_council (1).py",
+            "sha256_base64": "UF4V2vpuNEbcIs5kJ3d2q8VW7sWrKZSB+wEVf21vIYo="
+        },
+        {
+            "file": "UniversalReasoning.py",
+            "sha256_base64": "H1F9eGXj7KkkeKYY1qTUO6TTXtV5T9X7P/RbbpZQ9Ic="
+        },
+        {
+            "file": "cognition_cocooner.py",
+            "sha256_base64": "/kjcPrdWBffXiRzvhKstf/Yauwio96p/SrNN8yyNdBE="
+        },
+        {
+            "file": "optimize.py",
+            "sha256_base64": "j21rblQkj+pi13UFdghKkxol5mLNJIXarLCSWyPBRVI="
+        },
+        {
+            "file": "analyze_cocoonsethics.py",
+            "sha256_base64": "s9sSDdJzZxypcGytbQhCKQ2qeFs3WozBDGcIH0ozD3o="
+        },
+        {
+            "file": "Codetteconfig.json",
+            "sha256_base64": "4fyxXTVnk7/IMZ2xs4gP0yl++nX5O0JYOS6cLOR31Bs="
+        },
+        {
+            "file": "manifesto.md",
+            "sha256_base64": "dqSLCSwVp/lKeVvv5fzmSEpBW52CsqKm6UBEOhjxHuM="
+        },
+        {
+            "file": "Quantum.Cosmic.Multicore.txt",
+            "sha256_base64": "b1myT8O3kJGJO+mmwex0T+Fm/UCaFJrTBLomLM65tU4="
+        }
+    ]
+}

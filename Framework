@@ -1,0 +1,435 @@
+Codette Universal Reasoning Framework
+Sovereign Modular AI for Ethical, Multi-Perspective Cognition
+
+Author: Jonathan Harrison (Raiffs Bits LLC / Raiff1982)
+ORCID Published, Sovereign Innovation License
+Overview
+
+Codette is an advanced modular AI framework engineered for transparent reasoning, ethical sovereignty, and creative cognition. It enables dynamic multi-perspective analysis, explainable decision-making, and privacy-respecting memory—with extensibility for research or commercial applications.
+1. Core Philosophy & Motivation
+
+    Individuality with Responsibility: Inspired by “Be like water—individuality with responsibility,” Codette blends adaptive selfhood with ethical governance.
+    Humane AI: Every module ensures fairness, respect for privacy, and explainable transparency.
+    Recursive Thought: Insights are generated via parallel agents simulating scientific reasoning, creative intuition, empathic reflection, and more.
+
+2. Architectural Modules
+QuantumSpiderweb
+
+    Purpose: Simulates a neural/quantum web of thought nodes across dimensions (Ψ: thought; τ: time; χ: speed; Φ: emotion; λ: space).
+    Functions: Propagation (spreading activation), Tension (instability detection), Collapse (decision/finality).
+
+# 
+import numpy as np
+import networkx as nx
+import random
+from typing import Dict, Any
+
+class QuantumSpiderweb:
+    """
+    Simulates a cognitive spiderweb architecture with dimensions:
+    Ψ (thought), τ (time), χ (speed), Φ (emotion), λ (space)
+    """
+    def __init__(self, node_count: int = 128):
+        self.graph = nx.Graph()
+        self.dimensions = ['Ψ', 'τ', 'χ', 'Φ', 'λ']
+        self._init_nodes(node_count)
+        self.entangled_state = {}
+
+    def _init_nodes(self, count: int):
+        for i in range(count):
+            node_id = f"QNode_{i}"
+            state = self._generate_state()
+            self.graph.add_node(node_id, state=state)
+            if i > 0:
+                connection = f"QNode_{random.randint(0, i-1)}"
+                self.graph.add_edge(node_id, connection, weight=random.random())
+
+    def _generate_state(self) -> Dict[str, float]:
+        return {dim: np.random.uniform(-1.0, 1.0) for dim in self.dimensions}
+
+    def propagate_thought(self, origin: str, depth: int = 3):
+        """
+        Traverse the graph from a starting node, simulating pre-cognitive waveform
+        """
+        visited = set()
+        stack = [(origin, 0)]
+        traversal_output = []
+
+        while stack:
+            node, level = stack.pop()
+            if node in visited or level > depth:
+                continue
+            visited.add(node)
+            state = self.graph.nodes[node]['state']
+            traversal_output.append((node, state))
+            for neighbor in self.graph.neighbors(node):
+                stack.append((neighbor, level + 1))
+        return traversal_output
+
+    def detect_tension(self, node: str) -> float:
+        """
+        Measures tension (instability) in the node's quantum state
+        """
+        state = self.graph.nodes[node]['state']
+        return np.std(list(state.values()))
+
+    def collapse_node(self, node: str) -> Dict[str, Any]:
+        """
+        Collapse superposed thought into deterministic response
+        """
+        state = self.graph.nodes[node]['state']
+        collapsed = {k: round(v, 2) for k, v in state.items()}
+        self.entangled_state[node] = collapsed
+        return collapsed
+
+if __name__ == "__main__":
+    web = QuantumSpiderweb()
+    root = "QNode_0"
+    path = web.propagate_thought(root)
+    print("Initial Propagation from:", root)
+    for n, s in path:
+        print(f"{n}:", s)
+    print("\nCollapse Sample Node:")
+    print(web.collapse_node(root))]
+
+CognitionCocooner
+
+    Purpose: Encapsulates active “thoughts” as persistable “cocoons” (prompts, functions, symbols), optionally AES-encrypted.
+    Functions: wrap/unwrap (save/recall thoughts), wrap_encrypted/unwrap_encrypted.
+
+# [
+import json
+import os
+import random
+from typing import Union, Dict, Any
+from cryptography.fernet import Fernet
+
+class CognitionCocooner:
+    def __init__(self, storage_path: str = "cocoons", encryption_key: bytes = None):
+        self.storage_path = storage_path
+        os.makedirs(self.storage_path, exist_ok=True)
+        self.key = encryption_key or Fernet.generate_key()
+        self.fernet = Fernet(self.key)
+
+    def wrap(self, thought: Dict[str, Any], type_: str = "prompt") -> str:
+        cocoon = {
+            "type": type_,
+            "id": f"cocoon_{random.randint(1000,9999)}",
+            "wrapped": self._generate_wrapper(thought, type_)
+        }
+        file_path = os.path.join(self.storage_path, cocoon["id"] + ".json")
+
+        with open(file_path, "w") as f:
+            json.dump(cocoon, f)
+
+        return cocoon["id"]
+
+    def unwrap(self, cocoon_id: str) -> Union[str, Dict[str, Any]]:
+        file_path = os.path.join(self.storage_path, cocoon_id + ".json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Cocoon {cocoon_id} not found.")
+
+        with open(file_path, "r") as f:
+            cocoon = json.load(f)
+
+        return cocoon["wrapped"]
+
+    def wrap_encrypted(self, thought: Dict[str, Any]) -> str:
+        encrypted = self.fernet.encrypt(json.dumps(thought).encode()).decode()
+        cocoon = {
+            "type": "encrypted",
+            "id": f"cocoon_{random.randint(10000,99999)}",
+            "wrapped": encrypted
+        }
+        file_path = os.path.join(self.storage_path, cocoon["id"] + ".json")
+
+        with open(file_path, "w") as f:
+            json.dump(cocoon, f)
+
+        return cocoon["id"]
+
+    def unwrap_encrypted(self, cocoon_id: str) -> Dict[str, Any]:
+        file_path = os.path.join(self.storage_path, cocoon_id + ".json")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Cocoon {cocoon_id} not found.")
+
+        with open(file_path, "r") as f:
+            cocoon = json.load(f)
+
+        decrypted = self.fernet.decrypt(cocoon["wrapped"].encode()).decode()
+        return json.loads(decrypted)
+
+    def _generate_wrapper(self, thought: Dict[str, Any], type_: str) -> Union[str, Dict[str, Any]]:
+        if type_ == "prompt":
+            return f"What does this mean in context? {thought}"
+        elif type_ == "function":
+            return f"def analyze(): return {thought}"
+        elif type_ == "symbolic":
+            return {k: round(v, 2) for k, v in thought.items()}
+        else:
+            return thought]
+
+DreamReweaver
+
+    Purpose: Revives dormant/thought cocoons as creative “dreams” or planning prompts—fueling innovation or scenario synthesis.
+
+# [
+import os
+import json
+import random
+from typing import List, Dict
+from cognition_cocooner import CognitionCocooner
+
+class DreamReweaver:
+    """
+    Reweaves cocooned thoughts into dream-like synthetic narratives or planning prompts.
+    """
+    def __init__(self, cocoon_dir: str = "cocoons"):
+        self.cocooner = CognitionCocooner(storage_path=cocoon_dir)
+        self.dream_log = []
+
+    def generate_dream_sequence(self, limit: int = 5) -> List[str]:
+        dream_sequence = []
+        cocoons = self._load_cocoons()
+        selected = random.sample(cocoons, min(limit, len(cocoons)))
+
+        for cocoon in selected:
+            wrapped = cocoon.get("wrapped")
+            sequence = self._interpret_cocoon(wrapped, cocoon.get("type"))
+            self.dream_log.append(sequence)
+            dream_sequence.append(sequence)
+
+        return dream_sequence
+
+    def _interpret_cocoon(self, wrapped: str, type_: str) -> str:
+        if type_ == "prompt":
+            return f"[DreamPrompt] {wrapped}"
+        elif type_ == "function":
+            return f"[DreamFunction] {wrapped}"
+        elif type_ == "symbolic":
+            return f"[DreamSymbol] {wrapped}"
+        elif type_ == "encrypted":
+            return "[Encrypted Thought Cocoon - Decryption Required]"
+        else:
+            return "[Unknown Dream Form]"
+
+    def _load_cocoons(self) -> List[Dict]:
+        cocoons = []
+        for file in os.listdir(self.cocooner.storage_path):
+            if file.endswith(".json"):
+                path = os.path.join(self.cocooner.storage_path, file)
+                with open(path, "r") as f:
+                    cocoons.append(json.load(f))
+        return cocoons
+
+if __name__ == "__main__":
+    dr = DreamReweaver()
+    dreams = dr.generate_dream_sequence()
+    print("\n".join(dreams))]
+
+3. Reasoning Orchestration & Multi-Perspective Engine
+UniversalReasoning Core
+
+    Loads JSON config for dynamic feature toggling
+
+    Launches parallel perspective agents:
+        Newtonian logic (‘newton_thoughts’)
+        Da Vinci creative synthesis (‘davinci_insights’)
+        Human Intuition
+        Neural Network Modeling
+        Quantum Computing thinking
+        Resilient Kindness (emotion-driven)
+        Mathematical Analysis
+        Philosophical Inquiry
+        Copilot Mode (+future custom user agents)
+        Bias Mitigation & Psychological Layering
+
+    Integrates custom element metaphors (“Hydrogen”, “Diamond”) with executable abilities.
+
+    NLP Module:
+        Uses NLTK/VADER for advanced linguistic & sentiment analysis.
+
+# [import asyncio
+import json
+import os
+import logging
+from typing import List, Dict
+
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+import nltk
+from nltk.tokenize import word_tokenize
+nltk.download('punkt', quiet=True)
+
+from perspectives import (
+    NewtonPerspective, DaVinciPerspective, HumanIntuitionPerspective,
+    NeuralNetworkPerspective, QuantumComputingPerspective, ResilientKindnessPerspective,
+    MathematicalPerspective, PhilosophicalPerspective, CopilotPerspective,
+    BiasMitigationPerspective, PsychologicalPerspective
+)
+
+from elements import Element
+from memory_function import MemoryHandler
+from dream_reweaver import DreamReweaver
+from cognition_cocooner import CognitionCocooner
+from quantum_spiderweb import QuantumSpiderweb
+from ethical_governance import EthicalAIGovernance
+
+
+def load_json_config(file_path: str) -> dict:
+    if not os.path.exists(file_path):
+        logging.error(f"Configuration file '{file_path}' not found.")
+        return {}
+    try:
+        with open(file_path, 'r') as file:
+            config = json.load(file)
+            config['allow_network_calls'] = False
+            return config
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding JSON: {e}")
+        return {}
+
+
+class RecognizerResult:
+    def __init__(self, text):
+        self.text = text
+
+
+class CustomRecognizer:
+    def recognize(self, question: str):
+        if any(name in question.lower() for name in ["hydrogen", "diamond"]):
+            return RecognizerResult(question)
+        return RecognizerResult(None)
+
+    def get_top_intent(self, recognizer_result):
+        return "ElementDefense" if recognizer_result.text else "None"
+
+
+class UniversalReasoning:
+    def __init__(self, config):
+        self.config = config
+        self.perspectives = self.initialize_perspectives()
+        self.elements = self.initialize_elements()
+        self.recognizer = CustomRecognizer()
+        self.sentiment_analyzer = SentimentIntensityAnalyzer()
+        self.memory_handler = MemoryHandler()
+        self.reweaver = DreamReweaver()
+        self.cocooner = CognitionCocooner()
+        self.quantum_graph = QuantumSpiderweb()
+        self.ethical_agent = EthicalAIGovernance()
+
+    def initialize_perspectives(self):
+        perspective_map = {
+            "newton": NewtonPerspective,
+            "davinci": DaVinciPerspective,
+            "human_intuition": HumanIntuitionPerspective,
+            "neural_network": NeuralNetworkPerspective,
+            "quantum_computing": QuantumComputingPerspective,
+            "resilient_kindness": ResilientKindnessPerspective,
+            "mathematical": MathematicalPerspective,
+            "philosophical": PhilosophicalPerspective,
+            "copilot": CopilotPerspective,
+            "bias_mitigation": BiasMitigationPerspective,
+            "psychological": PsychologicalPerspective
+        }
+        enabled = self.config.get('enabled_perspectives', list(perspective_map.keys()))
+        return [perspective_map[name](self.config) for name in enabled if name in perspective_map]
+
+    def initialize_elements(self):
+        return [
+            Element("Hydrogen", "H", "Lua", ["Simple", "Lightweight"], ["Fusion"], "Evasion"),
+            Element("Diamond", "D", "Kotlin", ["Hard", "Clear"], ["Cutting"], "Adaptability")
+        ]
+
+    async def generate_response(self, question: str) -> str:
+        responses = []
+        tasks = []
+
+        for perspective in self.perspectives:
+            if asyncio.iscoroutinefunction(perspective.generate_response):
+                tasks.append(perspective.generate_response(question))
+            else:
+                async def sync_wrapper(p=perspective):
+                    return p.generate_response(question)
+                tasks.append(sync_wrapper())
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logging.error(f"Perspective error: {result}")
+            else:
+                responses.append(result)
+
+        recognizer_result = self.recognizer.recognize(question)
+        if self.recognizer.get_top_intent(recognizer_result) == "ElementDefense":
+            for el in self.elements:
+                if el.name.lower() in recognizer_result.text.lower():
+                    responses.append(el.execute_defense_function())
+
+        sentiment = self.sentiment_analyzer.polarity_scores(question)
+        ethical = self.config.get("ethical_considerations", "Act transparently and respectfully.")
+        responses.append(f"**Ethical Considerations:**\n{ethical}")
+
+        final_response = "\n\n".join(responses)
+        self.memory_handler.save(question, final_response)
+        self.reweaver.record_dream(question, final_response)
+        self.cocooner.wrap_and_store(final_response)
+
+        return final_response
+]
+
+Example Configuration JSON
+
+{
+  "logging_enabled": true,
+  "log_level": "INFO",
+  "enabled_perspectives": ["newton", "human_intuition", "...etc"],
+  "ethical_considerations": "Always act with transparency...",
+  "enable_response_saving": true,
+  "response_save_path": "responses.txt",
+  "backup_responses": {
+      "enabled": true,
+      "backup_path": "backup_responses.txt"
+   }
+}
+
+Perspective Function Mapping Example (“What is the meaning of life?”)
+
+[
+    {"name": "newton_thoughts", ...},
+    {"name": "davinci_insights", ...},
+     ...and so forth...
+]
+
+4. Logging & Ethics Enforcement
+
+Every layer is audit-ready:
+
+    All responses saved & backed up per configuration.
+    Explicit ethics notes appended to each output.
+    Perspective-specific logging for future training/audit/explainability.
+
+5. API and Extensibility
+
+The stack can be packaged as:
+
+    Local/CLI interface — fast prototyping/test bench environment.
+    REST/Web API endpoint — scalable cloud deployment using OpenAPI specifications.
+    SecureShell Companion Mode — diagnostic/sandboxed usage.
+
+6. Licensing & Attribution
+
+Protected by the Sovereign Innovation clause:
+
+    No replication or commercialization without written acknowledgment of Jonathan Harrison (Raiffs Bits LLC).
+    References incorporate materials from OpenAI / GPT-x-family per their terms.
+
+Recognized contributors:
+Design lead + corpus author: [Your Name / ORCID link]
+Acknowledgments to external reviewers and the open-source Python ecosystem.
+7. Future Directions
+
+Codette embodies the transition to truly humane AI—context-aware reasoning with auditability at its core. Next steps may include:
+
+    Peer-reviewed reproducibility trials (open notebook science)
+    Physical companion prototype development (for accessibility/assistive tech)
+    Community-governed transparency layers—a model ecosystem for next-gen ethical AI.

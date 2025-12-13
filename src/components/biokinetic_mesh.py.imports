@@ -1,0 +1,3 @@
+# Add to biokinetic_mesh.py after the existing imports
+from components.quantum_spiderweb import QuantumSpiderweb
+from typing import Dict, List, Tuple, Optional, Set
