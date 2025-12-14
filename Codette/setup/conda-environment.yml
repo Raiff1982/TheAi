@@ -1,0 +1,11 @@
+name: <conda_env_name>
+channels:
+  - pytorch
+  - nvidia
+  - defaults
+dependencies:
+  - pip=23.2.1
+  - python=3.9.18
+  - cuda=11.8
+  - pip:
+    - -r requirements.txt
