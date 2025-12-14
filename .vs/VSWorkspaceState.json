@@ -7,6 +7,6 @@
     "\\src\\components",
     "\\src\\utils"
   ],
-  "SelectedNode": "\\src\\utils\\response_verifier.py",
+  "SelectedNode": "\\src\\api\\app.py",
   "PreviewInSolutionExplorer": false
 }

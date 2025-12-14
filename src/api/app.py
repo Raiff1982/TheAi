@@ -98,13 +98,20 @@ try:
     try:
         # Handle both direct execution and package import
         try:
-            from ..utils.cocoon_manager import CocoonManager
-        except (ImportError, ValueError, SystemError):
-            # Fallback for direct execution when app.py is main module
-            import sys
-            import os
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+            # First try: direct relative import from src directory
             from utils.cocoon_manager import CocoonManager
+        except (ImportError, ValueError, SystemError):
+            try:
+                # Second try: package-relative import
+                from src.utils.cocoon_manager import CocoonManager
+            except (ImportError, ValueError, SystemError):
+                # Third try: modify path and import
+                import sys
+                import os
+                utils_path = os.path.join(os.path.dirname(__file__), '../utils')
+                if utils_path not in sys.path:
+                    sys.path.insert(0, utils_path)
+                from cocoon_manager import CocoonManager
         
         cocoon_manager = CocoonManager("./cocoons")
         cocoon_manager.load_cocoons()
