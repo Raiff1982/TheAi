@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 import logging
-from utils.response_verifier import ResponseVerifier
+from ..utils.response_verifier import ResponseVerifier
 
 logger = logging.getLogger(__name__)
 

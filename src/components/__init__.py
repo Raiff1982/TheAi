@@ -41,7 +41,6 @@ from .user_personalization import UserPersonalizer  # Corrected class name
 # Search and analysis
 from .search_engine import SearchEngine
 from .fractal import FractalIdentity
-from .response_verifier import ResponseVerifier
 
 __all__ = [
     # Core
@@ -76,5 +75,4 @@ __all__ = [
     # Search
     'SearchEngine',
     'FractalIdentity',
-    'ResponseVerifier',
 ]

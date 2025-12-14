@@ -3,11 +3,22 @@ import time
 from ..knowledge_base.grounding_truth import GroundingTruth
 
 # Try to import generic responder for multi-perspective optimization
+GENERIC_RESPONDER_AVAILABLE = False
 try:
     from codette_responder_generic import get_generic_responder
     GENERIC_RESPONDER_AVAILABLE = True
 except ImportError:
-    GENERIC_RESPONDER_AVAILABLE = False
+    try:
+        # Fallback: Try importing from parent directory
+        import sys
+        import os
+        parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+        from codette_responder_generic import get_generic_responder
+        GENERIC_RESPONDER_AVAILABLE = True
+    except ImportError:
+        get_generic_responder = None
 
 class ResponseProcessor:
     """
