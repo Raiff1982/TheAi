@@ -149,7 +149,7 @@ def _generate_model_response(self, prompt: str) -> str:
             return_tensors="pt",
             padding=True,
             truncation=True,
-            max_length=512
+            max_length=1024  # Increased from 512 to allow longer prompts
         )
         
         # Move to GPU if available
@@ -159,13 +159,13 @@ def _generate_model_response(self, prompt: str) -> str:
         # Set generation config for balanced, natural responses
         from transformers import GenerationConfig
         generation_config = GenerationConfig(
-            max_length=512,
+            max_length=1024,  # Increased from 512 for longer responses
             num_return_sequences=1,
             no_repeat_ngram_size=3,
             do_sample=True,
             pad_token_id=self.tokenizer.eos_token_id,
             repetition_penalty=1.3,
-            min_length=20,
+            min_length=50,  # Increased from 20 to ensure meaningful responses
             eos_token_id=self.tokenizer.eos_token_id
         )
         self.model.generation_config = generation_config
@@ -184,19 +184,27 @@ def _generate_model_response(self, prompt: str) -> str:
         if len(response_parts) > 1:
             response = response_parts[1].strip()
             
-        # Filter out system messages and protected content (minimal filtering)
+        # Filter out system messages and protected content (strip markers from text)
         system_markers = [
-            '[Protected:', '[System:', '[System:',  # Only specific tags
+            '[Protected:', '[System:', '[System optimized response]',
         ]
         
         lines = response.split('\n')
         filtered_lines = []
         for line in lines:
-            # Only skip lines with actual system markers (be lenient)
+            # Skip lines that are purely system markers
             if any(marker in line for marker in system_markers):
-                continue
-            # Otherwise keep the line
-            filtered_lines.append(line)
+                # Try to extract content after marker instead of skipping entirely
+                cleaned_line = line
+                for marker in system_markers:
+                    if marker in cleaned_line:
+                        # Remove the marker from the line
+                        cleaned_line = cleaned_line.replace(marker, '').strip()
+                if cleaned_line:  # Only add if something remains
+                    filtered_lines.append(cleaned_line)
+            else:
+                # Keep lines without markers as-is
+                filtered_lines.append(line)
             
         response = '\n'.join(filtered_lines).strip()  # Use newline join, not space
         
