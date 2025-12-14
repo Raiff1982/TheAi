@@ -10,12 +10,12 @@ import json
 import logging
 import os
 
-from components.multimodal_analyzer import MultimodalAnalyzer
-from components.dynamic_learning import DynamicLearner
-from components.health_monitor import HealthMonitor
+from .multimodal_analyzer import MultimodalAnalyzer
+from .dynamic_learning import DynamicLearner
+from .health_monitor import HealthMonitor
 
 try:
-    from utils.logger import logger
+    from ..utils.logger import logger
 except Exception:
     logger = logging.getLogger(__name__)
 

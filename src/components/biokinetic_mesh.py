@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 import json
-from components.quantum_spiderweb import QuantumSpiderweb
+from .quantum_spiderweb import QuantumSpiderweb  # Changed to relative import
 
 logger = logging.getLogger(__name__)
 
