@@ -5,7 +5,7 @@ This module provides user personalization capabilities.
 import json
 from typing import Dict, Any
 try:
-    from utils.database import Database
+    from ..utils.database import Database
 except Exception:
     Database = None
 

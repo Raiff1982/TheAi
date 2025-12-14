@@ -94,7 +94,7 @@ try:
     
     # Initialize cocoon manager
     try:
-        from utils.cocoon_manager import CocoonManager
+        from ..utils.cocoon_manager import CocoonManager
         cocoon_manager = CocoonManager("./cocoons")
         cocoon_manager.load_cocoons()
         
