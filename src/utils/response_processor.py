@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Optional
 import time
 from ..knowledge_base.grounding_truth import GroundingTruth
+from ..components.response_templates import get_response_templates
 
 # Try to import generic responder for multi-perspective optimization
 GENERIC_RESPONDER_AVAILABLE = False
@@ -20,19 +21,33 @@ except ImportError:
     except ImportError:
         get_generic_responder = None
 
+# Import natural response enhancer
+try:
+    from ..components.natural_response_enhancer import get_natural_enhancer
+    NATURAL_ENHANCER_AVAILABLE = True
+except ImportError:
+    NATURAL_ENHANCER_AVAILABLE = False
+
+
 class ResponseProcessor:
     """
     Processes and verifies AI responses using the grounding truth system
-    and optimizes perspective selection with the generic responder
+    and optimizes perspective selection with the generic responder.
+    
+    Now includes natural response enhancement to preserve Codette's identity
+    while improving conversational naturalness.
     """
     
     def __init__(self):
         self.grounding_truth = GroundingTruth()
         self.context_history = []
         self.generic_responder = get_generic_responder() if GENERIC_RESPONDER_AVAILABLE else None
+        self.natural_enhancer = get_natural_enhancer() if NATURAL_ENHANCER_AVAILABLE else None
+        self.response_templates = get_response_templates()
         self.user_id = "anonymous"  # Can be set per session
         
-    def process_response(self, query: str, response: str, context: Optional[str] = None) -> str:
+    def process_response(self, query: str, response: str, context: Optional[str] = None,
+                        confidence: float = 0.85) -> str:
         """
         Process and verify a response using grounding truth and multi-perspective optimization
         
@@ -40,11 +55,22 @@ class ResponseProcessor:
             query: The original user query
             response: The generated response
             context: Optional context category
+            confidence: How confident the system is in this response (0-1)
             
         Returns:
-            Processed and verified response
+            Processed and verified response with natural enhancement
         """
-        # Analyze query with generic responder to understand domain and select perspectives
+        # Step 1: Natural enhancement (removes unnatural markers)
+        if self.natural_enhancer:
+            try:
+                response = self.natural_enhancer.enhance_response(
+                    response, confidence=confidence, context={'domain': self._detect_domain(query)}
+                )
+            except Exception as e:
+                # Natural enhancer is optional; if it fails, continue processing
+                pass
+        
+        # Step 2: Analyze query with generic responder to understand domain and select perspectives
         perspective_analysis = None
         if self.generic_responder:
             try:
@@ -58,33 +84,46 @@ class ResponseProcessor:
                 # Generic responder is optional; if it fails, continue processing
                 pass
         
-        # Split response into statements for verification
+        # Step 3: Split response into statements for verification
         statements = self._split_into_statements(response)
         
         verified_statements = []
         uncertain_statements = []
         
-        # Verify each statement
+        # Step 4: Verify each statement
         for statement in statements:
             verification = self.grounding_truth.verify_statement(statement, context)
             
             if verification["verified"]:
                 verified_statements.append(statement)
             else:
-                # Add confidence qualifier
+                # Add confidence qualifier naturally
                 qualified_statement = self._add_qualifier(statement, verification["confidence"])
                 uncertain_statements.append(qualified_statement)
         
-        # Reconstruct response with proper qualifiers
+        # Step 5: Reconstruct response with proper qualifiers
         processed_response = self._construct_response(
             query, verified_statements, uncertain_statements
         )
         
         return processed_response
         
+    def _detect_domain(self, query: str) -> str:
+        """Detect the domain of the query for better context"""
+        query_lower = query.lower()
+        
+        if any(word in query_lower for word in ['mix', 'eq', 'compress', 'audio', 'track', 'bpm', 'daw']):
+            return 'music'
+        elif any(word in query_lower for word in ['code', 'program', 'software', 'function', 'class']):
+            return 'programming'
+        elif any(word in query_lower for word in ['data', 'analysis', 'statistics', 'metric']):
+            return 'data'
+        else:
+            return 'general'
+        
     def _enhance_with_perspectives(self, response: str, perspectives: List[Dict]) -> str:
         """
-        Enhance response with multi-perspective annotations
+        Enhance response with multi-perspective context subtly
         
         Args:
             response: The original response
@@ -93,7 +132,7 @@ class ResponseProcessor:
         Returns:
             Response with perspective context (optional enhancement)
         """
-        # Optional: Add subtle perspective indicators to response
+        # Optional: Add subtle perspective diversity hints without markers
         # For now, just return original response; perspectives are used for learning
         return response
         
@@ -116,17 +155,18 @@ class ResponseProcessor:
         return statements
         
     def _add_qualifier(self, statement: str, confidence: float) -> str:
-        """Add appropriate qualifier based on confidence level"""
+        """Add appropriate qualifier based on confidence level - naturally"""
         if confidence >= 0.8:
-            return f"{statement} (highly likely)"
+            return f"{statement}"  # No qualifier needed for high confidence
         elif confidence >= 0.6:
-            return f"{statement} (probably)"
+            return f"{statement} (likely)"
         elif confidence >= 0.4:
             return f"{statement} (possibly)"
         elif confidence >= 0.2:
-            return f"It's uncertain, but {statement.lower()}"
+            uncertain = self.response_templates.get_uncertain_prefix()
+            return f"{uncertain}{statement.lower()}"
         else:
-            return f"I'm not certain about this, but {statement.lower()}"
+            return f"I'm not sure about this, but {statement.lower()}"
             
     def _construct_response(
         self, 
@@ -134,30 +174,25 @@ class ResponseProcessor:
         verified_statements: List[str], 
         uncertain_statements: List[str]
     ) -> str:
-        """Construct final response with proper structure and qualifiers"""
+        """Construct final response with proper structure and qualifiers - naturally"""
         response_parts = []
         
         # Add verified information first
         if verified_statements:
-            response_parts.append("Here's what I know for certain:")
             response_parts.extend(verified_statements)
             
         # Add uncertain information with clear separation
         if uncertain_statements:
             if verified_statements:
-                response_parts.append("\nAdditionally:")
-            else:
-                response_parts.append("Based on my current understanding:")
+                response_parts.append("")  # Add spacing
             response_parts.extend(uncertain_statements)
             
-        # Add general disclaimer if there are uncertain statements
-        if uncertain_statements:
-            response_parts.append(
-                "\nNote: Some parts of this response are based on my current understanding "
-                "and might need verification. Feel free to ask for clarification on specific points."
-            )
+        # Add general note if there are uncertain statements (less obtrusive)
+        if uncertain_statements and not verified_statements:
+            reflection = self.response_templates.get_reflection_prefix()
+            response_parts.insert(0, reflection)
             
-        return "\n".join(response_parts)
+        return "\n".join(response_parts).strip()
         
     def update_context(self, query: str, response: str):
         """Update context history for better response processing"""
@@ -209,3 +244,12 @@ class ResponseProcessor:
             
         except Exception as e:
             return {"status": "error", "message": str(e)}
+    
+    def evaluate_response_quality(self, response: str) -> Dict[str, Any]:
+        """Evaluate response quality and naturalness"""
+        if self.natural_enhancer:
+            try:
+                return self.natural_enhancer.evaluate_response_naturalness(response)
+            except Exception as e:
+                return {"error": str(e)}
+        return {}

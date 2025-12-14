@@ -265,3 +265,5 @@ cocoons/*.tmp
 # logs/
 # !logs/CRITICAL/
 /.vs/CopilotSnapshots
+/.vs/TheAI.slnx/copilot-chat/eb1486c6/sessions
+/.vs/TheAI.slnx/FileContentIndex

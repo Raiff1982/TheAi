@@ -18,12 +18,14 @@ try:
     from components.aegis_integration import AegisBridge
     from components.aegis_integration.config import AEGIS_CONFIG
     from components.search_engine import SearchEngine
+    from components.response_templates import get_response_templates
 except ImportError:
     # Fallback for container environment
     from src.components.ai_core import AICore
     from src.components.aegis_integration import AegisBridge
     from src.components.aegis_integration.config import AEGIS_CONFIG
     from src.components.search_engine import SearchEngine
+    from src.components.response_templates import get_response_templates
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -131,6 +133,9 @@ except Exception as e:
     logger.error(f"Error initializing model: {e}")
     sys.exit(1)
 
+# Initialize response templates for variety
+response_templates = get_response_templates()
+
 def process_message(message: str, history: list) -> tuple:
     """Process chat messages with improved context management"""
     try:
@@ -161,10 +166,7 @@ def process_message(message: str, history: list) -> tuple:
             
     except Exception as e:
         logger.error(f"Error in chat: {str(e)}\n{traceback.format_exc()}")
-        error_msg = (
-            "I apologize, but I encountered an error processing your request. "
-            "Please try again with a different query."
-        )
+        error_msg = response_templates.get_error_response()
         history.append({"role": "user", "content": message})
         history.append({"role": "assistant", "content": error_msg})
         return "", history

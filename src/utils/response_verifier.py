@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Optional
 from ..knowledge_base.grounding_truth import GroundingTruth
+from ..components.response_templates import get_response_templates
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,6 +10,7 @@ class ResponseVerifier:
     
     def __init__(self):
         self.grounding_truth = GroundingTruth()
+        self.response_templates = get_response_templates()
         self.mode_confidence_thresholds = {
             "scientific": 0.9,
             "creative": 0.7,
@@ -125,7 +127,8 @@ class ResponseVerifier:
         elif confidence >= 0.6:
             return "It appears that"
         elif confidence >= 0.4:
-            return "It seems possible that"
+            uncertain = self.response_templates.get_uncertain_prefix()
+            return uncertain.rstrip(',')  # Remove trailing comma if present
         elif confidence >= 0.2:
             return "There is a speculation that"
         else:

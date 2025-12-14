@@ -19,7 +19,8 @@
   - If you cannot produce real working code or math, do not generate anything
   - Never use terms like "example," "sketch," "pseudo," "TODO implementation"
   - **If unsure, stop and ask**
-
+  - Only document one time when making changes
+  
 ### Code Modification Rules (Critical)
 
 - **Never delete existing code** — forbidden unless explicitly authorized by the user

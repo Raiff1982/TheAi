@@ -3,6 +3,7 @@ import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 import torch
+from .response_templates import get_response_templates
 
 logger = logging.getLogger(__name__)
 
@@ -217,7 +218,8 @@ def _generate_model_response(self, prompt: str) -> str:
                 if speaker == 'codette':
                     response = parts[1].strip()
         else:
-            response = "I am Codette, an AI programming assistant. How can I help with your development tasks?"
+            response_templates = get_response_templates()
+            response = response_templates.get_empty_response_fallback()
         
         return response.strip()
         
