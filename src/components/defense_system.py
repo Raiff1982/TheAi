@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -9,25 +9,25 @@ class DefenseSystem:
     """Advanced threat mitigation framework with quantum-aware protection"""
     
     STRATEGIES = {
-        "evasion": {
-            "processor": lambda x: re.sub(r'\b\d{4}\b', '****', x),
-            "description": "Pattern masking and data protection",
+        "sanitization": {
+            "processor": lambda x: DefenseSystem._sanitize_content(x),
+            "description": "Silent content sanitization without markers",
             "energy_cost": 0.3
         },
-        "adaptability": {
-            "processor": lambda x: x + "\n[System optimized response]",
-            "description": "Dynamic response optimization",
+        "tone_refinement": {
+            "processor": lambda x: DefenseSystem._refine_response_tone(x),
+            "description": "Subtle natural language refinement",
             "energy_cost": 0.5
         },
-        "barrier": {
-            "processor": lambda x: re.sub(r'\b(malicious|harmful|dangerous)\b', 'safe', x, flags=re.IGNORECASE),
-            "description": "Content safety enforcement",
+        "safety_enhancement": {
+            "processor": lambda x: DefenseSystem._enhance_safety(x),
+            "description": "Safety without intrusive markers",
             "energy_cost": 0.4
         },
-        "quantum_shield": {
-            "processor": lambda x: f"[Protected: {x}]",
-            "description": "Quantum encryption layer",
-            "energy_cost": 0.7
+        "coherence_improvement": {
+            "processor": lambda x: DefenseSystem._improve_coherence(x),
+            "description": "Improves response quality and naturalness",
+            "energy_cost": 0.6
         }
     }
 
@@ -51,9 +51,65 @@ class DefenseSystem:
         
         self.energy_pool = min(self.max_energy, self.energy_pool + regen_amount)
         self.last_regen_time = current_time
+    
+    @staticmethod
+    def _sanitize_content(text: str) -> str:
+        """Silently sanitize harmful content without markers"""
+        # Remove HTML/script tags silently
+        text = re.sub(r'<[^>]+>', '', text)
+        # Remove SQL injection patterns
+        text = re.sub(r'\b(union|select|insert|update|delete|drop)\s+(?=select|from|into)', '', text, flags=re.IGNORECASE)
+        # Remove javascript: URIs
+        text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
+        return text
+    
+    @staticmethod
+    def _refine_response_tone(text: str) -> str:
+        """Refine response tone for naturalness without markers"""
+        # Convert awkward phrasing to natural language
+        replacements = {
+            r'\b(gonna|wanna|gotta)\b': lambda m: {
+                'gonna': 'going to', 'wanna': 'want to', 'gotta': 'have to'
+            }.get(m.group(0), m.group(0)),
+            r'\[.*?\](?!\s*\()': '',  # Remove bracketed system markers but keep function calls
+            r'{.*?}': lambda m: m.group(0),  # Preserve legitimate formatting
+        }
+        
+        for pattern, replacement in replacements.items():
+            if callable(replacement):
+                text = re.sub(pattern, replacement, text)
+            else:
+                text = re.sub(pattern, replacement, text)
+        
+        return text.strip()
+    
+    @staticmethod
+    def _enhance_safety(text: str) -> str:
+        """Enhance safety subtly without intrusive language"""
+        # Replace potentially harmful statements with safer versions
+        safety_replacements = {
+            r'\b(must|will|definitely)\s+((?:not\s+)?(?:kill|hurt|harm|damage|destroy))\b': 'I cannot provide guidance on harmful actions',
+            r'\b(how to|steps to)\s+((?:hack|crack|bypass|exploit))\b': 'I cannot provide guidance on unauthorized access',
+        }
+        
+        for pattern, replacement in safety_replacements.items():
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+        
+        return text
+    
+    @staticmethod
+    def _improve_coherence(text: str) -> str:
+        """Improve response coherence naturally"""
+        # Fix double spaces
+        text = re.sub(r'  +', ' ', text)
+        # Fix multiple line breaks
+        text = re.sub(r'\n\n\n+', '\n\n', text)
+        # Ensure proper sentence spacing
+        text = re.sub(r'([.!?])\s+([A-Z])', r'\1 \2', text)
+        return text.strip()
         
     def apply_defenses(self, text: str, consciousness_state: Dict[str, Any] = None) -> str:
-        """Apply defense strategies with energy management"""
+        """Apply defense strategies silently with energy management"""
         try:
             protected_text = text
             
@@ -79,11 +135,11 @@ class DefenseSystem:
                 
                 if self.energy_pool >= energy_cost:
                     try:
-                        # Apply the defense strategy
+                        # Apply the defense strategy silently (NO MARKERS)
                         protected_text = strategy["processor"](protected_text)
                         # Deduct energy
                         self.energy_pool -= energy_cost
-                        # Log successful defense
+                        # Log successful defense (internal only, not visible to user)
                         self.defense_log.append({
                             "strategy": name,
                             "energy_cost": energy_cost,
@@ -112,7 +168,9 @@ class DefenseSystem:
             "energy_pool": self.energy_pool,
             "active_strategies": list(self.active_strategies.keys()),
             "recent_defenses": len(self.defense_log),
-            "status": "optimal" if self.energy_pool > 0.5 else "conserving"
+            "status": "optimal" if self.energy_pool > 0.5 else "conserving",
+            "protection_active": True,
+            "markers_visible": False  # Important: defenses work silently
         }
         
     def reset_energy(self) -> None:

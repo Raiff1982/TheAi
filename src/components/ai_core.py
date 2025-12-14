@@ -39,6 +39,17 @@ from .ai_core_async_methods import generate_text_async, _generate_model_response
 from .defense_system import DefenseSystem
 from .health_monitor import HealthMonitor
 from .fractal import FractalIdentity
+from .response_templates import get_response_templates
+
+# Import natural response enhancer (optional - graceful degradation if unavailable)
+try:
+    from .natural_response_enhancer import get_natural_enhancer
+    NATURAL_ENHANCER_AVAILABLE = True
+except ImportError:
+    NATURAL_ENHANCER_AVAILABLE = False
+    get_natural_enhancer = None
+    logger = logging.getLogger(__name__)
+    logger.debug("Natural response enhancer not available")
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +147,17 @@ class AICore:
         self.client = None
         self.last_clean_time = datetime.now()
         
+        # Initialize response templates for variety
+        self.response_templates = get_response_templates()
+        
+        # Initialize natural response enhancer if available
+        self.natural_enhancer = get_natural_enhancer() if NATURAL_ENHANCER_AVAILABLE else None
+        
         logger.info(f"AI Core initialized in {'test' if test_mode else 'production'} mode")
+        if self.natural_enhancer:
+            logger.info("Natural response enhancement: ENABLED")
+        else:
+            logger.debug("Natural response enhancement: NOT AVAILABLE")
         
         try:
             self.cognitive_processor = CognitiveProcessor()
@@ -467,6 +488,17 @@ class AICore:
                 except Exception as e:
                     logger.debug(f"Defense system processing skipped: {e}")
                 
+                # Apply natural response enhancement (NEW - Step 1 after defense)
+                try:
+                    if self.natural_enhancer:
+                        response = self.natural_enhancer.enhance_response(
+                            response,
+                            confidence=consciousness.get("m_score", 0.85),
+                            context={'domain': 'general'}  # Can be customized per query
+                        )
+                except Exception as e:
+                    logger.debug(f"Natural enhancement skipped: {e}")
+                
                 # Apply AEGIS enhancement if enabled
                 if use_aegis and hasattr(self, 'aegis_bridge') and self.aegis_bridge:
                     try:
@@ -504,7 +536,7 @@ class AICore:
                     
             except Exception as e:
                 logger.warning(f"Error processing response: {e}")
-                response = "I apologize, but I need to collect my thoughts. Could you please rephrase your question?"
+                response = self.response_templates.get_error_response()
             
             # Aggressive cleanup of non-factual content
             response_lines = response.split('\n')
@@ -536,7 +568,7 @@ class AICore:
             
             # Ensure the response isn't empty after cleanup
             if not response:
-                response = "I apologize, but I need to be more precise. Could you please rephrase your question?"
+                response = self.response_templates.get_empty_response_fallback()
             
             # Further truncate if too long
             if len(response) > 500:
@@ -544,6 +576,7 @@ class AICore:
             
             # Store cleaned response in memory for context
             self._manage_response_memory(response)
+            self.response_templates.track_response(response)
             
             return response
             
