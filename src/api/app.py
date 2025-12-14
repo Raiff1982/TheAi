@@ -94,7 +94,16 @@ try:
     
     # Initialize cocoon manager
     try:
-        from ..utils.cocoon_manager import CocoonManager
+        # Handle both direct execution and package import
+        try:
+            from ..utils.cocoon_manager import CocoonManager
+        except (ImportError, ValueError, SystemError):
+            # Fallback for direct execution when app.py is main module
+            import sys
+            import os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+            from utils.cocoon_manager import CocoonManager
+        
         cocoon_manager = CocoonManager("./cocoons")
         cocoon_manager.load_cocoons()
         
