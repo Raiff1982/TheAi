@@ -1,5 +1,5 @@
 from typing import Dict, Any, List, Optional
-from knowledge_base.grounding_truth import GroundingTruth
+from ..knowledge_base.grounding_truth import GroundingTruth
 import logging
 
 logger = logging.getLogger(__name__)

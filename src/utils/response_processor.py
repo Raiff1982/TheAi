@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional
 import time
-from knowledge_base.grounding_truth import GroundingTruth
+from ..knowledge_base.grounding_truth import GroundingTruth
 
 # Try to import generic responder for multi-perspective optimization
 try:
