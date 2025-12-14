@@ -264,3 +264,4 @@ cocoons/*.tmp
 # Optional: Uncomment to ignore all logs except critical ones
 # logs/
 # !logs/CRITICAL/
+/.vs/CopilotSnapshots
