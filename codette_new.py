@@ -16,6 +16,8 @@ try:
     nltk.download('punkt', quiet=True)
     nltk.download('averaged_perceptron_tagger', quiet=True)
     nltk.download('wordnet', quiet=True)
+    # Newer NLTK releases require punkt_tab for sentence tokenization metadata
+    nltk.download('punkt_tab', quiet=True)
 except Exception as e:
     logger.warning(f"NLTK download failed (this is non-critical): {e}")
 
