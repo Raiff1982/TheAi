@@ -17,7 +17,14 @@ except Exception:
     np = None
     NUMPY_AVAILABLE = False
 
-from typing import Dict, Any, List, Optional, Tuple
+try:
+    from quantum_mathematics import QuantumMathematics
+    QM_AVAILABLE = True
+except Exception:
+    QuantumMathematics = None
+    QM_AVAILABLE = False
+
+from typing import Dict, Any, List, Optional, Tuple, Callable
 import random
 import logging
 
@@ -36,7 +43,8 @@ class QuantumSpiderweb:
     - Node entanglement
     """
     
-    def __init__(self, node_count: int = 128):
+    def __init__(self, node_count: int = 128, seed: Optional[int] = None,
+                 telemetry_hook: Optional[Callable[[str, Dict[str, Any]], None]] = None):
         if NETWORKX_AVAILABLE:
             self.graph = nx.Graph()
             self.use_networkx = True
@@ -45,10 +53,24 @@ class QuantumSpiderweb:
             self.use_networkx = False
             logger.warning("NetworkX not available - using dict-based fallback")
         
+        self.seed = seed
+        self.telemetry_hook = telemetry_hook
+        if seed is not None:
+            random.seed(seed)
+            if NUMPY_AVAILABLE:
+                np.random.seed(seed)
+        
         self.dimensions = ['Ψ', 'τ', 'χ', 'Φ', 'λ']
         self._init_nodes(node_count)
         self.entangled_states = {}
         self.activation_threshold = 0.3
+        self.telemetry = {
+            "propagations": 0,
+            "tension_checks": 0,
+            "collapses": 0,
+            "entanglements": 0,
+            "last_metrics": {}
+        }
         
     def _init_nodes(self, count: int):
         """Initialize quantum nodes with multi-dimensional states"""
@@ -115,6 +137,11 @@ class QuantumSpiderweb:
             for neighbor in self._get_neighbors(node):
                 stack.append((neighbor, level + 1))
                 
+        self._record_telemetry("propagation", {
+            "origin": origin,
+            "depth": depth,
+            "visited": len(traversal_output)
+        })
         return traversal_output
         
     def detect_tension(self, node: str) -> float:
@@ -133,12 +160,30 @@ class QuantumSpiderweb:
         state = self._get_node_state(node)
         
         if NUMPY_AVAILABLE:
-            return float(np.std(list(state.values())))
+            tension = float(np.std(list(state.values())))
         else:
             values = list(state.values())
             mean = sum(values) / len(values)
             variance = sum((v - mean) ** 2 for v in values) / len(values)
-            return variance ** 0.5  # Standard deviation
+            tension = variance ** 0.5  # Standard deviation
+        
+        intent = None
+        if QM_AVAILABLE and QuantumMathematics is not None:
+            coherence = max(0.0, 1.0 - min(1.0, tension))
+            # Slight modulation uses activation threshold as base frequency
+            intent = QuantumMathematics.intent_vector_modulation(
+                kappa=1.0,
+                f_base=self.activation_threshold,
+                delta_f=0.1,
+                coherence=coherence
+            )
+        
+        self._record_telemetry("tension", {
+            "node": node,
+            "tension": tension,
+            "intent": intent
+        })
+        return tension
         
     def collapse_node(self, node: str) -> Dict[str, Any]:
         """
@@ -162,6 +207,10 @@ class QuantumSpiderweb:
         # Store in entangled states
         self.entangled_states[node] = collapsed
         
+        self._record_telemetry("collapse", {
+            "node": node,
+            "state": collapsed
+        })
         return collapsed
         
     def entangle_nodes(self, node1: str, node2: str) -> bool:
@@ -178,11 +227,27 @@ class QuantumSpiderweb:
         if not (self._node_exists(node1) and self._node_exists(node2)):
             return False
             
-        # Create entangled state
+        state1 = self._get_node_state(node1)
+        state2 = self._get_node_state(node2)
         entangled_id = f"E_{node1}_{node2}"
+        entangled_state = self._generate_state()
+
+        coherence = None
+        energy = None
+        if QM_AVAILABLE and NUMPY_AVAILABLE and QuantumMathematics is not None:
+            try:
+                psi1 = complex(state1.get('Ψ', 0.0), state1.get('Φ', 0.0))
+                psi2 = complex(state2.get('Ψ', 0.0), state2.get('Φ', 0.0))
+                coherence = QuantumMathematics.quantum_entanglement_sync(0.8, psi1, psi2)
+                energy = QuantumMathematics.planck_orbital_interaction(abs(coherence))
+            except Exception as exc:
+                logger.debug(f"Entanglement math fallback: {exc}")
+
         self.entangled_states[entangled_id] = {
             "nodes": [node1, node2],
-            "state": self._generate_state()
+            "state": entangled_state,
+            "coherence": float(abs(coherence)) if coherence is not None else None,
+            "energy": float(energy) if energy is not None else None
         }
         
         # Add high-weight connection
@@ -192,6 +257,11 @@ class QuantumSpiderweb:
             self.graph['nodes'][node1]['neighbors'][node2] = 1.0
             self.graph['nodes'][node2]['neighbors'][node1] = 1.0
             
+        self._record_telemetry("entangle", {
+            "pair": (node1, node2),
+            "coherence": float(abs(coherence)) if coherence is not None else None,
+            "energy": float(energy) if energy is not None else None
+        })
         return True
     
     # =========================================================================
@@ -256,6 +326,32 @@ class QuantumSpiderweb:
                 "entangled_pairs": len(self.entangled_states),
                 "dimensions": len(self.dimensions)
             }
+
+    def get_telemetry(self) -> Dict[str, Any]:
+        """Expose lightweight telemetry metrics"""
+        return dict(self.telemetry)
+
+    # ---------------------------------------------------------------------
+    # Internal telemetry helper
+    # ---------------------------------------------------------------------
+    def _record_telemetry(self, event: str, payload: Dict[str, Any]):
+        if not hasattr(self, "telemetry"):
+            return
+        if event == "propagation":
+            self.telemetry["propagations"] += 1
+        elif event == "tension":
+            self.telemetry["tension_checks"] += 1
+        elif event == "collapse":
+            self.telemetry["collapses"] += 1
+        elif event == "entangle":
+            self.telemetry["entanglements"] += 1
+        self.telemetry["last_metrics"] = payload
+        logger.debug(f"Telemetry event={event} payload={payload}")
+        if self.telemetry_hook is not None:
+            try:
+                self.telemetry_hook(event, payload)
+            except Exception as exc:
+                logger.debug(f"Telemetry hook failed: {exc}")
 
 
 if __name__ == "__main__":
