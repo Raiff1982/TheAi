@@ -12,7 +12,23 @@ from typing import Dict, List, Any, Tuple, Optional
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from enum import Enum
+from types import SimpleNamespace
 import hashlib
+
+# Stable responder (optional)
+try:
+    from codette_stable_responder import (
+        select_perspectives,
+        get_perspective_hash,
+        PerspectiveType,
+    )
+    STABLE_RESPONDER_AVAILABLE = True
+except ImportError:
+    # Keep graceful fallback; enhanced responder can still operate deterministically
+    STABLE_RESPONDER_AVAILABLE = False
+    select_perspectives = None
+    get_perspective_hash = None
+    PerspectiveType = None
 
 # ==============================================================================
 # DATA MODELS
@@ -340,7 +356,10 @@ class CodetteEnhancedResponder:
 
     def generate_response(self, query: str, user_id: str = "anonymous") -> Dict[str, Any]:
         """Generate response with user preference learning"""
-        from codette_stable_responder import select_perspectives, get_perspective_hash
+        if STABLE_RESPONDER_AVAILABLE and select_perspectives:
+            perspectives_base = select_perspectives(query)
+        else:
+            perspectives_base = self._fallback_perspectives(query)
 
         # Get user preferences (or create new)
         if user_id not in self.user_preferences:
@@ -360,7 +379,12 @@ class CodetteEnhancedResponder:
         category = self._detect_category(query)
 
         # Select perspectives (prefer user's favorite perspectives)
-        perspectives_base = select_perspectives(query)
+        # If stable responder unavailable, fall back to deterministic local mapping
+        # perspectives_base is list[Tuple[perspective_type, float]] where perspective_type exposes .value
+        if STABLE_RESPONDER_AVAILABLE and select_perspectives:
+            perspectives_base = select_perspectives(query)
+        else:
+            perspectives_base = self._fallback_perspectives(query)
         user_prefs = self.user_preferences[user_id].preferred_perspectives
 
         # Reorder perspectives by user preference
@@ -650,6 +674,26 @@ class CodetteEnhancedResponder:
         if below_avg:
             return f"Try exploring more {below_avg[0].replace('_', ' ')} perspectives for balanced learning"
         return "Great! You're getting well-rounded perspectives."
+
+    def _fallback_perspectives(self, query: str) -> List[Tuple[SimpleNamespace, float]]:
+        """Deterministic local perspective selection when stable responder is unavailable"""
+        query_lower = query.lower()
+        issue_signals = any(k in query_lower for k in ["issue", "problem", "stuck", "error", "distort", "clip", "muddy", "harsh"])
+        creative_signals = any(k in query_lower for k in ["creative", "idea", "experiment", "sound design", "texture", "ambient"])
+        workflow_signals = any(k in query_lower for k in ["workflow", "template", "cpu", "latency", "slow", "optimize", "optimize", "faster", "efficient"])
+
+        base = [
+            ("technical_troubleshooting", 0.72 if issue_signals else 0.6),
+            ("mix_engineering", 0.7),
+            ("audio_theory", 0.62),
+            ("creative_production", 0.68 if creative_signals else 0.55),
+            ("workflow_optimization", 0.65 if workflow_signals else 0.5),
+        ]
+
+        perspectives: List[Tuple[SimpleNamespace, float]] = []
+        for name, score in base:
+            perspectives.append((SimpleNamespace(value=name), score))
+        return perspectives
 
 
 # ==============================================================================

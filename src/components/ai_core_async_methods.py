@@ -1,6 +1,7 @@
 """Async methods for the AICore class"""
 import asyncio
 import logging
+import time
 from concurrent.futures import ThreadPoolExecutor
 import torch
 from .response_templates import get_response_templates
@@ -10,6 +11,14 @@ logger = logging.getLogger(__name__)
 async def generate_text_async(self, prompt: str) -> str:
     """Generate text asynchronously with integrated cognitive processing"""
     try:
+        start_time = time.monotonic()
+
+        cached_entry = self._get_cached_entry(prompt) if hasattr(self, "_get_cached_entry") else None
+        if cached_entry and cached_entry.get("response"):
+            cached_response = cached_entry.get("response")
+            self._manage_response_memory(cached_response)
+            return cached_response
+
         # Calculate current consciousness state
         consciousness_state = self._calculate_consciousness_state()
         
@@ -37,10 +46,11 @@ async def generate_text_async(self, prompt: str) -> str:
                 self.cocoon_manager.update_quantum_state(self.cognitive_processor.quantum_state)
         
         # Get active perspectives
-        active_perspectives = self._get_active_perspectives()
+        active_perspectives = self._get_active_perspectives(prompt)
         perspective_context = "\n".join([
-            f"From {p['name']}'s perspective: {p['description']}"
-            for p in active_perspectives[:3]  # Use top 3 most relevant perspectives
+            f"From {self.perspectives[p]['name']}'s perspective: {self.perspectives[p]['description']}"
+            for p in active_perspectives[:3]
+            if p in self.perspectives
         ])
         
         # Generate response with enhanced context and reality anchoring
@@ -121,7 +131,7 @@ async def generate_text_async(self, prompt: str) -> str:
                 "insights": insights,
                 "quantum_state": self.cognitive_processor.quantum_state,
                 "consciousness_state": consciousness_state,
-                "perspectives": [p["name"] for p in active_perspectives[:3]],
+                "perspectives": [self.perspectives[p]["name"] for p in active_perspectives[:3] if p in self.perspectives],
                 "aegis_analysis": enhancement_result,
                 "meta_data": {
                     "timestamp": str(asyncio.get_event_loop().time()),
@@ -133,7 +143,20 @@ async def generate_text_async(self, prompt: str) -> str:
             if enhancement_result and "virtue_analysis" in enhancement_result:
                 cocoon_data["virtue_profile"] = enhancement_result["virtue_analysis"]
                 
+            latency = time.monotonic() - start_time
+            cocoon_data.setdefault("latency", {})
+            cocoon_data["latency"].update({
+                "total_seconds": latency,
+                "per_perspective": {p: latency for p in active_perspectives}
+            })
+
             self.cocoon_manager.save_cocoon(cocoon_data)
+
+        latency = time.monotonic() - start_time
+
+        # Store in cache
+        if hasattr(self, "_store_cache_entry"):
+            self._store_cache_entry(prompt, response, active_perspectives, latency)
         
         return response
         

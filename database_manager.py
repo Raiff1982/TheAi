@@ -9,30 +9,34 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import os
 import threading
+from queue import Queue
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
 
 class DatabaseManager:
     """Manager for SQLite database with Codette data"""
-    
+
     def __init__(self, db_path: str = "codette_data.db"):
         """Initialize database manager
-        
+
         Args:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
         self.lock = threading.Lock()
+        self.pool_size = int(os.getenv("CODETTE_DB_POOL_SIZE", "5"))
+        self._pool: Queue = Queue(maxsize=self.pool_size)
+        self._warm_pool()
         self._init_db()
-    
+
     def _init_db(self):
         """Initialize database tables"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection() as conn:
                 cursor = conn.cursor()
-                
-                # Users table
+
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,8 +46,7 @@ class DatabaseManager:
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
-                
-                # Conversations table
+
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS conversations (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,8 +57,7 @@ class DatabaseManager:
                         FOREIGN KEY (user_id) REFERENCES users (id)
                     )
                 ''')
-                
-                # Messages table
+
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS messages (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,8 +69,7 @@ class DatabaseManager:
                         FOREIGN KEY (conversation_id) REFERENCES conversations (id)
                     )
                 ''')
-                
-                # Memory table for Codette's long-term memory
+
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS memory (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,138 +79,82 @@ class DatabaseManager:
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 ''')
-                
-                conn.commit()
+
                 logger.info(f"Database initialized at {self.db_path}")
-                
         except sqlite3.Error as e:
             logger.error(f"Database initialization error: {e}")
-            # For in-memory databases that might not support certain operations,
-            # we still want to log but not fail completely
             if ":memory:" not in self.db_path:
                 raise
-    
+
+    def _warm_pool(self):
+        """Create initial pool of SQLite connections."""
+        for _ in range(self.pool_size):
+            try:
+                self._pool.put_nowait(self._create_connection())
+            except Exception as e:
+                logger.warning(f"Connection pool warm-up failed: {e}")
+                break
+
+    def _create_connection(self):
+        return sqlite3.connect(
+            self.db_path,
+            check_same_thread=False,
+            timeout=30
+        )
+
+    @contextmanager
+    def connection(self):
+        """Pooled connection context manager."""
+        conn = None
+        try:
+            conn = self._pool.get(block=True, timeout=30)
+            yield conn
+            conn.commit()
+        except Exception:
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise
+        finally:
+            if conn:
+                try:
+                    self._pool.put_nowait(conn)
+                except Exception:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+
     def create_user(self, username: str, password_hash: str, metadata: Optional[Dict] = None) -> int:
-        """Create a new user
-        
-        Args:
-            username: Username
-            password_hash: Hashed password
-            metadata: Optional user metadata
-            
-        Returns:
-            User ID
-        """
+        """Create a new user"""
         try:
             with self.lock:
-                with sqlite3.connect(self.db_path) as conn:
+                with self.connection() as conn:
                     cursor = conn.cursor()
                     cursor.execute(
                         'INSERT INTO users (username, password_hash) VALUES (?, ?)',
                         (username, password_hash)
                     )
-                    conn.commit()
-                    logger.info(f"User created: {username}")
                     return cursor.lastrowid
         except sqlite3.IntegrityError:
             logger.warning(f"User already exists: {username}")
             raise ValueError(f"User {username} already exists")
-    
+
     def get_user(self, username: str) -> Optional[Dict]:
-        """Get user by username
-        
-        Args:
-            username: Username to look up
-            
-        Returns:
-            User dict or None
-        """
+        """Get user by username"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection() as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
                 row = cursor.fetchone()
                 return dict(row) if row else None
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving user: {e}")
-            return None
-    
-    def save_message(self, conversation_id: int, user_message: str, ai_response: str,
-                    metadata: Optional[Dict] = None) -> int:
-        """Save a conversation message
-        
-        Args:
-            conversation_id: ID of conversation
-            user_message: User's message
-            ai_response: AI's response
-            metadata: Optional message metadata
-            
-        Returns:
-            Message ID
-        """
-        try:
-            with self.lock:
-                with sqlite3.connect(self.db_path) as conn:
-                    cursor = conn.cursor()
-                    metadata_json = json.dumps(metadata or {})
-                    cursor.execute('''
-                        INSERT INTO messages (conversation_id, user_message, ai_response, metadata)
-                        VALUES (?, ?, ?, ?)
-                    ''', (conversation_id, user_message, ai_response, metadata_json))
-                    conn.commit()
-                    return cursor.lastrowid
-        except sqlite3.Error as e:
-            logger.error(f"Error saving message: {e}")
-            raise
-    
-    def get_conversation_history(self, conversation_id: int, limit: int = 50) -> List[Dict]:
-        """Get conversation history
-        
-        Args:
-            conversation_id: ID of conversation
-            limit: Max messages to retrieve
-            
-        Returns:
-            List of message dicts
-        """
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
-                cursor = conn.cursor()
-                cursor.execute('''
-                    SELECT * FROM messages 
-                    WHERE conversation_id = ?
-                    ORDER BY created_at DESC
-                    LIMIT ?
-                ''', (conversation_id, limit))
-                rows = cursor.fetchall()
-                return [dict(row) for row in rows]
-        except sqlite3.Error as e:
-            logger.error(f"Error retrieving history: {e}")
-            return []
-    
-    def create_conversation(self, user_id: int, title: Optional[str] = None) -> int:
-        """Create a new conversation
-        
-        Args:
-            user_id: ID of user
-            title: Optional conversation title
-            
-        Returns:
-            Conversation ID
-        """
-        try:
-            with self.lock:
-                with sqlite3.connect(self.db_path) as conn:
-                    cursor = conn.cursor()
-                    cursor.execute(
-                        'INSERT INTO conversations (user_id, title) VALUES (?, ?)',
-                        (user_id, title)
                     )
                     conn.commit()
                     return cursor.lastrowid
-        except sqlite3.Error as e:
+            with self.connection() as conn:
             logger.error(f"Error creating conversation: {e}")
             raise
     
@@ -222,7 +167,7 @@ class DatabaseManager:
         """
         try:
             with self.lock:
-                with sqlite3.connect(self.db_path) as conn:
+                with self.connection() as conn:
                     cursor = conn.cursor()
                     value_json = json.dumps(value)
                     cursor.execute('''
@@ -240,7 +185,7 @@ class DatabaseManager:
         Args:
             key: Memory key
             
-        Returns:
+            with self.connection() as conn:
             Memory value or None
         """
         try:
@@ -262,7 +207,7 @@ class DatabaseManager:
             Dictionary of all memory
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute('SELECT key, value FROM memory')
                 rows = cursor.fetchall()
@@ -275,10 +220,9 @@ class DatabaseManager:
         """Clear all memory"""
         try:
             with self.lock:
-                with sqlite3.connect(self.db_path) as conn:
+                with self.connection() as conn:
                     cursor = conn.cursor()
                     cursor.execute('DELETE FROM memory')
-                    conn.commit()
                     logger.info("Memory cleared")
         except sqlite3.Error as e:
             logger.error(f"Error clearing memory: {e}")
@@ -293,7 +237,7 @@ class DatabaseManager:
             Dictionary of user data
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection() as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 

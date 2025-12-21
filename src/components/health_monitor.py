@@ -4,7 +4,7 @@ import time
 import logging
 from collections import deque
 from threading import Lock
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -212,11 +212,14 @@ class HealthMonitor:
             logger.error(f"Anomaly detection failed: {e}")
             return 0.0
             
-    def get_health_summary(self) -> Dict:
-        """Get system health summary"""
+    def get_health_summary(self, extra: Optional[Dict[str, Any]] = None) -> Dict:
+        """Get system health summary with optional extra metrics."""
         try:
             if not self.metrics:
-                return {"status": "initializing"}
+                summary = {"status": "initializing"}
+                if extra:
+                    summary["extra"] = extra
+                return summary
                 
             recent_metrics = list(self.metrics)[-10:]
             if np is not None:
@@ -228,7 +231,7 @@ class HealthMonitor:
                 avg_cpu = float(sum(m["cpu"] for m in recent_metrics)/len(recent_metrics))
                 avg_latency = float(sum(m["response_time"] for m in recent_metrics)/len(recent_metrics))
             
-            return {
+            summary = {
                 "status": "healthy" if avg_memory < 80 and avg_cpu < 80 else "stressed",
                 "avg_memory": avg_memory,
                 "avg_cpu": avg_cpu,
@@ -236,7 +239,13 @@ class HealthMonitor:
                 "recent_anomalies": len([a for a in self.anomaly_history if (datetime.now() - a["timestamp"]).seconds < 300]),
                 "last_check": self.last_check
             }
+            if extra:
+                summary["extra"] = extra
+            return summary
             
         except Exception as e:
             logger.error(f"Health summary generation failed: {e}")
-            return {"status": "error", "error": str(e)}
+            summary = {"status": "error", "error": str(e)}
+            if extra:
+                summary["extra"] = extra
+            return summary

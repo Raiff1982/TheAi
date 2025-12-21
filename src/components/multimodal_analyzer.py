@@ -14,7 +14,10 @@ heuristics and headers.
 from typing import Dict, Any, List, Union, Optional
 import io
 import os
-import imghdr
+try:
+    import imghdr
+except Exception:
+    imghdr = None
 import mimetypes
 import wave
 import struct

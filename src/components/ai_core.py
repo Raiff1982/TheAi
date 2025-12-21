@@ -2,6 +2,11 @@ import json
 import os
 import logging
 import random
+import re
+import time
+from collections import OrderedDict
+from threading import Lock
+from typing import Iterable
 try:
     import torch
 except Exception:
@@ -16,6 +21,16 @@ try:
     import numpy as np
 except Exception:
     np = None
+
+try:
+    from nltk.sentiment import SentimentIntensityAnalyzer
+except Exception:
+    SentimentIntensityAnalyzer = None
+
+try:
+    from opentelemetry import trace
+except Exception:
+    trace = None
 
 import asyncio
 from datetime import datetime
@@ -125,6 +140,20 @@ class AICore:
         }
     }
 
+    PERSPECTIVE_KEYWORDS = {
+        "newton": ["math", "equation", "calculate", "proof", "physics", "force", "derivative", "statistics"],
+        "davinci": ["creative", "design", "art", "imagine", "visual", "innovation", "idea", "story"],
+        "human_intuition": ["feel", "emotion", "empathy", "intuitive", "experience", "human"],
+        "quantum_computing": ["quantum", "qubit", "entangle", "superposition", "probability", "measurement"],
+        "philosophical": ["ethic", "meaning", "existential", "value", "moral", "philosophy", "why"],
+        "neural_network": ["model", "neural", "training", "dataset", "pattern", "deep learning", "weights"],
+        "bias_mitigation": ["bias", "fair", "inclusive", "equity", "diversity", "justice"],
+        "psychological": ["behavior", "psychology", "cognitive", "mental", "habit", "motivation"],
+        "copilot": ["assist", "collaborate", "pair", "support", "help", "explain"],
+        "mathematical": ["algebra", "geometry", "calculus", "theorem", "formula", "proof"],
+        "symbolic": ["logic", "symbol", "rule", "knowledge graph", "reasoning"]
+    }
+
     def __init__(self, test_mode: bool = False):
         load_dotenv()
         # Core components
@@ -146,6 +175,25 @@ class AICore:
         self.quantum_state = {"coherence": 0.5}  # Default quantum state
         self.client = None
         self.last_clean_time = datetime.now()
+
+        # Query cache (LRU with TTL)
+        self.query_cache = OrderedDict()
+        self.query_cache_ttl_seconds = 300  # 5 minutes
+        self.query_cache_max_entries = 50
+        self.cache_lock = Lock()
+        self.cache_hits = 0
+        self.cache_misses = 0
+
+        # Perspective registry (instance-level, supports dynamic extension)
+        self.perspectives = dict(self.PERSPECTIVES)
+        self.perspective_keywords = dict(self.PERSPECTIVE_KEYWORDS)
+        self._load_dynamic_perspectives()
+
+        # Tracing
+        self.tracer = trace.get_tracer("codette.ai_core") if trace else None
+
+        # Sentiment
+        self.sentiment_analyzer = SentimentIntensityAnalyzer() if SentimentIntensityAnalyzer else None
         
         # Initialize response templates for variety
         self.response_templates = get_response_templates()
@@ -268,18 +316,150 @@ class AICore:
             logger.warning(f"Error calculating consciousness state: {e}")
             return {"coherence": 0.5, "m_score": 0.5, "awareness_level": "medium"}
     
-    def _get_active_perspectives(self) -> List[str]:
-        """Get the top active perspectives for the current state"""
+    def _get_active_perspectives(self, prompt: Optional[str] = None) -> List[str]:
+        """Get the top active perspectives for the current state using keyword relevance."""
         try:
-            # Return top 3 perspectives by default
-            all_perspectives = list(self.PERSPECTIVES.keys())
-            if len(all_perspectives) <= 3:
-                return all_perspectives
-            # For simplicity, return a deterministic subset
-            return all_perspectives[:3]
+            all_keys = list(self.perspectives.keys())
+            if not prompt:
+                return all_keys[:3] if len(all_keys) > 3 else all_keys
+
+            prompt_lower = prompt.lower()
+            scores = []
+            for idx, key in enumerate(all_keys):
+                base_score = 0.1  # maintain deterministic ordering floor
+                keyword_hits = sum(1 for kw in self.perspective_keywords.get(key, []) if kw in prompt_lower)
+                sentiment_boost = self._sentiment_weight(prompt_lower, key)
+                # Light boost for longer prompts to avoid empty signals
+                length_bonus = min(len(prompt_lower) / 800.0, 0.2)
+                total_score = base_score + keyword_hits + length_bonus + sentiment_boost
+                scores.append((total_score, idx, key))
+
+            scores.sort(key=lambda x: (-x[0], x[1]))
+            top_keys = [entry[2] for entry in scores[:3]]
+            if not top_keys:
+                return all_keys[:3] if len(all_keys) > 3 else all_keys
+            return top_keys
         except Exception as e:
             logger.warning(f"Error getting active perspectives: {e}")
             return ["newton", "davinci", "human_intuition"]
+
+    def _sentiment_weight(self, prompt_lower: str, perspective_key: str) -> float:
+        """Bias perspective selection based on sentiment."""
+        try:
+            score = 0.0
+            compound = 0.0
+            if self.sentiment_analyzer:
+                compound = self.sentiment_analyzer.polarity_scores(prompt_lower).get("compound", 0.0)
+            else:
+                # lightweight lexical fallback
+                pos_tokens = ("love", "great", "good", "nice", "happy", "excited")
+                neg_tokens = ("bad", "sad", "angry", "upset", "worried", "concerned", "error")
+                pos_hits = sum(1 for t in pos_tokens if t in prompt_lower)
+                neg_hits = sum(1 for t in neg_tokens if t in prompt_lower)
+                total = pos_hits + neg_hits
+                compound = ((pos_hits - neg_hits) / total) if total else 0.0
+
+            if compound > 0.2:
+                if perspective_key in ("davinci", "human_intuition", "copilot"):
+                    score += 0.4 * compound
+            elif compound < -0.2:
+                if perspective_key in ("psychological", "bias_mitigation", "ethical", "human_intuition"):
+                    score += 0.4 * abs(compound)
+            return score
+        except Exception:
+            return 0.0
+
+    def _load_dynamic_perspectives(self):
+        """Load extra perspectives from environment variable CODETTE_PERSPECTIVES_JSON (JSON object)."""
+        try:
+            extra_raw = os.getenv("CODETTE_PERSPECTIVES_JSON")
+            if not extra_raw:
+                return
+            extra = json.loads(extra_raw)
+            if not isinstance(extra, dict):
+                return
+            for key, cfg in extra.items():
+                if key in self.perspectives:
+                    continue  # do not overwrite built-ins
+                if not isinstance(cfg, dict):
+                    continue
+                name = cfg.get("name") or key.title()
+                description = cfg.get("description") or "custom perspective"
+                prefix = cfg.get("prefix") or f"From {name}:"
+                temperature = float(cfg.get("temperature", 0.6))
+                self.perspectives[key] = {
+                    "name": name,
+                    "description": description,
+                    "prefix": prefix,
+                    "temperature": temperature
+                }
+                if "keywords" in cfg and isinstance(cfg["keywords"], Iterable):
+                    self.perspective_keywords[key] = list(cfg["keywords"])
+            logger.info(f"Loaded {len(extra)} dynamic perspectives from config")
+        except Exception as e:
+            logger.warning(f"Dynamic perspective load skipped: {e}")
+
+    def _get_cached_entry(self, prompt: str) -> Optional[Dict[str, Any]]:
+        """Return cached response if within TTL."""
+        now = time.time()
+        try:
+            with self.cache_lock:
+                entry = self.query_cache.get(prompt)
+                if not entry:
+                    self.cache_misses += 1
+                    return None
+                if now - entry.get("timestamp", 0) > self.query_cache_ttl_seconds:
+                    self.query_cache.pop(prompt, None)
+                    self.cache_misses += 1
+                    return None
+                self.query_cache.move_to_end(prompt)
+                self.cache_hits += 1
+                return entry
+        except Exception as e:
+            logger.debug(f"Cache retrieval failed: {e}")
+            return None
+
+    def _store_cache_entry(self, prompt: str, response: str, perspectives: List[str], latency: float) -> None:
+        """Store response in LRU cache with metadata."""
+        try:
+            with self.cache_lock:
+                self.query_cache[prompt] = {
+                    "response": response,
+                    "perspectives": perspectives,
+                    "latency": latency,
+                    "timestamp": time.time()
+                }
+                if len(self.query_cache) > self.query_cache_max_entries:
+                    # Pop oldest item
+                    self.query_cache.popitem(last=False)
+        except Exception as e:
+            logger.debug(f"Cache store failed: {e}")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Expose cache metrics without mutating state."""
+        try:
+            with self.cache_lock:
+                size = len(self.query_cache)
+            total_requests = self.cache_hits + self.cache_misses
+            hit_rate = (self.cache_hits / total_requests) if total_requests else 0.0
+            return {
+                "entries": size,
+                "max_entries": self.query_cache_max_entries,
+                "ttl_seconds": self.query_cache_ttl_seconds,
+                "hits": self.cache_hits,
+                "misses": self.cache_misses,
+                "hit_rate": round(hit_rate, 3),
+            }
+        except Exception as e:
+            logger.debug(f"Cache stats unavailable: {e}")
+            return {
+                "entries": 0,
+                "max_entries": self.query_cache_max_entries,
+                "ttl_seconds": self.query_cache_ttl_seconds,
+                "hits": self.cache_hits,
+                "misses": self.cache_misses,
+                "hit_rate": 0.0,
+            }
     
     def _manage_response_memory(self, response: str) -> None:
         """Manage conversation memory with limit enforcement"""
@@ -297,6 +477,40 @@ class AICore:
         except Exception as e:
             logger.debug(f"Error managing response memory: {e}")
 
+    def get_runtime_telemetry(self) -> Dict[str, Any]:
+        """Return health summary with cache and cocoon archival stats (lightweight)."""
+        cache_stats = self.get_cache_stats()
+        cocoon_stats = None
+        if getattr(self, "cocoon_manager", None) and hasattr(self.cocoon_manager, "get_archival_stats"):
+            try:
+                cocoon_stats = self.cocoon_manager.get_archival_stats()
+            except Exception as e:
+                logger.debug(f"Cocoon stats unavailable: {e}")
+
+        health_summary: Dict[str, Any]
+        if self.health_monitor:
+            try:
+                health_summary = self.health_monitor.get_health_summary(
+                    extra={
+                        "cache": cache_stats,
+                        "cocoons": cocoon_stats,
+                    }
+                )
+            except TypeError:
+                # Backward compatibility if signature differs
+                health_summary = self.health_monitor.get_health_summary()
+            except Exception as e:
+                logger.debug(f"Health summary unavailable: {e}")
+                health_summary = {"status": "unavailable", "error": str(e)}
+        else:
+            health_summary = {"status": "unavailable"}
+
+        # Always attach cache/cocoon stats so callers don't need to inspect extras
+        health_summary.setdefault("cache", cache_stats)
+        if cocoon_stats is not None:
+            health_summary.setdefault("cocoons", cocoon_stats)
+        return health_summary
+
     def generate_text(self, prompt: str, max_length: int = 1024, temperature: float = 0.7, perspective: str = None, use_aegis: bool = True):
         """Generate text with full consciousness integration.
         
@@ -313,14 +527,26 @@ class AICore:
         if not self.model or not self.tokenizer:
             return f"Codette: {prompt}"
         
+        start_time = time.monotonic()
+
+        # Cache check
+        cached_entry = self._get_cached_entry(prompt)
+        if cached_entry:
+            cached_response = cached_entry.get("response")
+            if cached_response:
+                self._manage_response_memory(cached_response)
+                return cached_response
+
+        span_ctx = self.tracer.start_as_current_span("ai_core.generate_text") if self.tracer else None
         try:
+            span = span_ctx.__enter__() if span_ctx else None
             # Ensure quantum_state is properly initialized before use
             if not isinstance(self.quantum_state, dict):
                 self.quantum_state = {"coherence": 0.5}
             
             # Calculate current consciousness state
             consciousness = self._calculate_consciousness_state()
-            active_perspectives = self._get_active_perspectives()
+            active_perspectives = self._get_active_perspectives(prompt)
             m_score = consciousness.get("m_score", 0.5)
             
             # Calculate dynamic temperature with smoother scaling
@@ -351,22 +577,18 @@ class AICore:
                 }
             }
             
-            # Save to cocoon manager
-            if hasattr(self, 'cocoon_manager') and self.cocoon_manager:
-                self.cocoon_manager.save_cocoon(cocoon_state)
-            
             # Initialize perspective tracking
             perspective_pairs = []
             
             # Handle specific perspective if provided
-            if perspective and perspective in self.PERSPECTIVES:
+            if perspective and perspective in self.perspectives:
                 active_perspectives = [perspective]
-                perspective_names = [self.PERSPECTIVES[perspective]["name"]]
+                perspective_names = [self.perspectives[perspective]["name"]]
                 # Single perspective mode uses just that perspective
-                perspective_pairs = [f"focused {self.PERSPECTIVES[perspective]['description']}"]
+                perspective_pairs = [f"focused {self.perspectives[perspective]['description']}"]
             else:
                 # Extract active perspective names for conversation context
-                perspective_names = [self.PERSPECTIVES[p]["name"] for p in active_perspectives]
+                perspective_names = [self.perspectives[p]["name"] for p in active_perspectives]
             
             if "Newton" in perspective_names and "Da Vinci" in perspective_names:
                 perspective_pairs.append("analytical creativity")
@@ -578,6 +800,20 @@ class AICore:
             self._manage_response_memory(response)
             self.response_templates.track_response(response)
             
+            latency = time.monotonic() - start_time
+            cocoon_state.setdefault("latency", {})
+            cocoon_state["latency"].update({
+                "total_seconds": latency,
+                "per_perspective": {p: latency for p in active_perspectives}
+            })
+
+            if hasattr(self, 'cocoon_manager') and self.cocoon_manager:
+                # update cocoon with latency telemetry
+                self.cocoon_manager.save_cocoon(cocoon_state)
+
+            # Store in cache
+            self._store_cache_entry(prompt, response, active_perspectives, latency)
+
             return response
             
         except RecursionError as e:
@@ -587,3 +823,6 @@ class AICore:
         except Exception as e:
             logger.error(f"Error generating text: {e}")
             return f"Codette: I encountered an error. {str(e)[:50]}..."
+        finally:
+            if span_ctx:
+                span_ctx.__exit__(None, None, None)

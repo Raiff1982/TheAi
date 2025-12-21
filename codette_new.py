@@ -34,6 +34,14 @@ except ImportError:
         NATURAL_ENHANCER_AVAILABLE = False
         logger.debug("Natural response enhancer not available")
 
+# Optional enhanced responder (multi-perspective with learning)
+try:
+    from codette_enhanced_responder import get_enhanced_responder
+    ENHANCED_RESPONDER_AVAILABLE = True
+except ImportError:
+    ENHANCED_RESPONDER_AVAILABLE = False
+    get_enhanced_responder = None
+
 
 class Codette:
     def __init__(self, user_name="User"):
@@ -64,6 +72,15 @@ class Codette:
         self.supabase_client = self._initialize_supabase()
         # Initialize natural response enhancer if available
         self.natural_enhancer = get_natural_enhancer() if NATURAL_ENHANCER_AVAILABLE else None
+        # Initialize enhanced responder when feature flag is enabled
+        self.enhanced_responder = None
+        enhanced_flag = os.getenv("CODETTE_ENHANCED_RESPONDER", "0")
+        if ENHANCED_RESPONDER_AVAILABLE and enhanced_flag == "1":
+            try:
+                self.enhanced_responder = get_enhanced_responder()
+                logger.info("Enhanced responder enabled for DAW queries")
+            except Exception as e:
+                logger.warning(f"Enhanced responder unavailable: {e}")
         # Response templates for variety
         self._init_response_templates()
         # Log after initialization
@@ -136,6 +153,19 @@ class Codette:
             technical_insight = self._generate_technical_insight_ml(key_concepts, sentiment)
             if technical_insight:
                 responses.append(technical_insight)
+
+            # Optional enhanced responder augmentation (feature-flagged)
+            if self.enhanced_responder:
+                try:
+                    enhanced = self.enhanced_responder.generate_response(prompt, user_id=self.user_name)
+                    perspectives = enhanced.get("perspectives", []) if isinstance(enhanced, dict) else []
+                    if perspectives:
+                        formatted = [
+                            f"[{p.get('name','')}] {p.get('response','')}" for p in perspectives[:3]
+                        ]
+                        responses.append("Enhanced perspectives:\n" + "\n".join(formatted))
+                except Exception as e:
+                    logger.debug(f"Enhanced responder failed; continuing without it: {e}")
         else:
             # For non-DAW queries, provide more thoughtful, varied responses
             primary_response = self._generate_primary_insight_ml(prompt, key_concepts, sentiment)

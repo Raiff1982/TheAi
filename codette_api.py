@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 import logging
 from typing import Optional, Dict, Any
 import sys
+from health_monitor import HealthMonitor
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,9 @@ try:
 except Exception as e:
     logger.error(f"Failed to initialize Codette: {e}")
     codette = None
+
+# Health monitor
+health_monitor = HealthMonitor()
 
 
 # Pydantic models for request/response
@@ -73,6 +77,7 @@ class HealthResponse(BaseModel):
     status: str = Field(default="healthy")
     message: str = Field(default="Codette API is running")
     version: str = Field(default="1.0.0")
+    metrics: Optional[Dict[str, Any]] = Field(default=None, description="Runtime health metrics")
 
 
 # API endpoints
@@ -98,11 +103,18 @@ async def health_check():
     """Health check endpoint"""
     if codette is None:
         raise HTTPException(status_code=503, detail="Codette not initialized")
-    
+
+    metrics: Optional[Dict[str, Any]] = None
+    try:
+        metrics = await health_monitor.check_status()
+    except Exception as e:
+        logger.warning(f"Health monitor check failed: {e}")
+
     return HealthResponse(
         status="healthy",
         message="Codette API is running",
-        version="1.0.0"
+        version="1.0.0",
+        metrics=metrics
     )
 
 

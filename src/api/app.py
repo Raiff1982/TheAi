@@ -126,7 +126,7 @@ try:
             ai_core.quantum_state = {"coherence": 0.5}
         
         logger.info(
-            f"Loaded {len(cocoon_manager.cocoon_data)} existing cocoons "
+            f"Indexed {cocoon_manager.cocoon_count} cocoons (lazy load) "
             f"with quantum coherence {ai_core.quantum_state.get('coherence', 0.5)}"
         )
     except Exception as e:
