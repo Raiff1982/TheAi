@@ -34,6 +34,15 @@ except ImportError:
         NATURAL_ENHANCER_AVAILABLE = False
         logger.debug("Natural response enhancer not available")
 
+# Optional DAW add-on (keeps core domain-neutral unless explicitly enabled)
+try:
+    from src.addons.daw_addon import DAWAddOn
+    DAW_ADDON_AVAILABLE = True
+except ImportError:
+    DAW_ADDON_AVAILABLE = False
+    DAWAddOn = None
+    logger.debug("DAW add-on not available")
+
 # Optional enhanced responder (multi-perspective with learning)
 try:
     from codette_enhanced_responder import get_enhanced_responder
@@ -51,7 +60,7 @@ class Codette:
         np.seterr(divide='ignore', invalid='ignore')
         # audit_log may rely on logging; ensure method exists before call
         self.context_memory = []
-        self.daw_knowledge = self._initialize_daw_knowledge()
+        self.daw_knowledge = {}
         self.recent_responses = []
         self.max_recent_responses = 20
         self.recent_response_hashes = set()
@@ -70,6 +79,9 @@ class Codette:
         self.has_chat_history_table = False
         self.music_knowledge_table = 'music_knowledge'
         self.supabase_client = self._initialize_supabase()
+        # Allow disabling DAW-specific behaviors via env; default OFF to keep core neutral
+        self.daw_enabled = os.getenv("CODETTE_ENABLE_DAW", "0") != "0"
+        self.daw_addon = self._load_daw_addon()
         # Initialize natural response enhancer if available
         self.natural_enhancer = get_natural_enhancer() if NATURAL_ENHANCER_AVAILABLE else None
         # Initialize enhanced responder when feature flag is enabled
@@ -88,6 +100,19 @@ class Codette:
             self.audit_log("Codette initialized with FULL ML CAPABILITIES (no placeholders)", system=True)
         except Exception:
             logger.info("Codette initialized (audit log not available yet)")
+
+    def _load_daw_addon(self):
+        """Load DAW add-on if available and enabled."""
+        if not self.daw_enabled:
+            return None
+        if not DAW_ADDON_AVAILABLE:
+            logger.debug("DAW add-on unavailable; continuing without DAW features")
+            return None
+        try:
+            return DAWAddOn()
+        except Exception as exc:
+            logger.debug("DAW add-on failed to initialize: %s", exc)
+            return None
 
     def _init_response_templates(self):
         """Initialize diverse response templates to prevent repetition"""
@@ -142,17 +167,14 @@ class Codette:
             self._track_response(response)
             return response
 
-        is_daw_query = self._is_daw_query_ml(prompt, key_concepts)
+        is_daw_query = False
+        if self.daw_addon:
+            is_daw_query = self.daw_addon.is_daw_query(prompt, key_concepts)
         responses: List[str] = []
 
-        if is_daw_query:
-            daw_response = self._generate_daw_specific_response_ml(prompt, key_concepts, sentiment)
-            if daw_response:
-                responses.append(daw_response)
-
-            technical_insight = self._generate_technical_insight_ml(key_concepts, sentiment)
-            if technical_insight:
-                responses.append(technical_insight)
+        if is_daw_query and self.daw_addon:
+            daw_responses = self.daw_addon.generate_responses(prompt, key_concepts, sentiment)
+            responses.extend([r for r in daw_responses if r])
 
             # Optional enhanced responder augmentation (feature-flagged)
             if self.enhanced_responder:
@@ -179,6 +201,12 @@ class Codette:
         # Handle empty responses
         if not responses:
             responses.append("I appreciate your question. Feel free to ask me about audio production, mixing, DAW workflows, or any music technology topics.")
+
+        followups = None
+        if is_daw_query and self.daw_addon:
+            followups = self.daw_addon.generate_followups(prompt, key_concepts)
+        if followups:
+            responses.append(followups)
 
         try:
             full_response = "\n\n".join(responses)
@@ -381,6 +409,71 @@ class Codette:
         ]
         return self._pick_unused_response(variations)
 
+    def _generate_followup_suggestions(self, prompt: str, concepts: List[str], is_daw_query: bool) -> Optional[str]:
+        """Proactively offer follow-up topics based on the prompt content."""
+        prompt_lower = prompt.lower()
+        suggestions: List[str] = []
+
+        if is_daw_query:
+            if any(term in prompt_lower for term in ['vocal', 'singer', 'voice']):
+                suggestions.extend([
+                    "Ask for a vocal chain order (HPF → EQ → compression → de-ess → reverb send).",
+                    "Check de-esser thresholds or sibilant bands if highs feel harsh.",
+                    "Request suggested attack/release times for your vocal style (spoken vs sung).",
+                ])
+            elif any(term in prompt_lower for term in ['guitar', 'bass', 'drum', 'kick', 'snare']):
+                suggestions.extend([
+                    "Compare mic/DI blend tips for your instrument to tighten tone.",
+                    "Ask for frequency slots to avoid masking with vocals or synths.",
+                    "Request parallel processing ideas (parallel comp or saturation) for punch without losing transients.",
+                ])
+            elif any(term in prompt_lower for term in ['reverb', 'delay', 'space', 'ambience']):
+                suggestions.extend([
+                    "Ask for predelay/decay starting points matched to your BPM.",
+                    "Check which elements should stay dry vs sent to the shared verb bus.",
+                    "Try mid-side EQ on reverb returns to keep lows centered and highs airy.",
+                ])
+            elif any(term in prompt_lower for term in ['mix', 'master', 'muddy', 'harsh', 'boomy', 'mud']):
+                suggestions.extend([
+                    "Request a 3-step cleanup checklist (HPF targets, surgical EQ, gain staging).",
+                    "Ask for reference track matching tips (loudness and tonal balance).",
+                    "Check mono-compatibility and phase if the mix collapses when summed.",
+                ])
+            else:
+                target = concepts[0] if concepts else 'your track'
+                suggestions.extend([
+                    f"Ask for a quick signal-flow plan tailored to {target} (gain → EQ → compression → space).",
+                    "Request starter EQ bands and ratios for common sources (vocals, drums, bass).",
+                    "Ask for a minimal CPU chain if your session is lagging (shared sends, render heavy FX).",
+                ])
+        else:
+            if any(term in prompt_lower for term in ['plan', 'next', 'follow', 'what else']):
+                suggestions.extend([
+                    "Define the goal, constraints, and success criteria so I can propose a concise plan.",
+                    "Ask for a decision tree to pick the next action based on your context.",
+                    "Request a short checklist you can execute immediately.",
+                ])
+            elif any(term in prompt_lower for term in ['help', 'stuck', 'problem', 'issue']):
+                suggestions.extend([
+                    "Share the exact symptom and recent changes so I can triage quickly.",
+                    "Ask for the top three likely causes and how to rule each out fast.",
+                    "Request a minimal reproduction checklist to isolate the issue.",
+                ])
+            else:
+                focus = concepts[0] if concepts else 'this topic'
+                suggestions.extend([
+                    f"Ask for a 3-bullet summary of {focus}, then a deeper dive only where you need it.",
+                    "Request examples vs counter-examples to clarify the boundaries of the idea.",
+                    "Ask for a quick-start checklist you can try in under 5 minutes.",
+                ])
+
+        if not suggestions:
+            return None
+
+        # Keep it concise and deterministic: top 3 suggestions only.
+        trimmed = suggestions[:3]
+        return "Follow-up ideas:\n- " + "\n- ".join(trimmed)
+
     def _generate_creative_response_ml(self, concepts: List[str], sentiment: Dict) -> str:
         """Generate varied creative synthesis perspectives"""
         if not concepts:
@@ -410,29 +503,7 @@ class Codette:
         return self._pick_unused_response(variations)
 
     def _initialize_daw_knowledge(self) -> Dict[str, Any]:
-        return {
-            "frequency_ranges": {
-                "sub_bass": (20, 60),
-                "bass": (60, 250),
-                "low_mid": (250, 500),
-                "mid": (500, 2000),
-                "high_mid": (2000, 4000),
-                "presence": (4000, 6000),
-                "brilliance": (6000, 20000)
-            },
-            "mixing_principles": {
-                "gain_staging": "Set master fader to -6dB headroom before mixing. Individual tracks should peak around -12dB to -6dB.",
-                "eq_fundamentals": "Cut before boost. Use high-pass filters to remove unnecessary low-end. EQ to fit tracks in the frequency spectrum, not in isolation.",
-                "compression_strategy": "Start with 4:1 ratio, adjust attack/release based on transient content. Use parallel compression for drums.",
-                "panning_technique": "Pan rhythmic elements for width, keep bass and kick centered. Use mid-side processing for stereo field control."
-            },
-            "problem_detection": {
-                "muddy_mix": "Excessive energy in 200-500Hz range. Solution: High-pass filters on non-bass elements, surgical EQ cuts.",
-                "harsh_highs": "Peak around 3-5kHz causing fatigue. Solution: Gentle EQ reduction, de-esser on vocals.",
-                "weak_low_end": "Insufficient bass presence. Solution: Check phase relationships, ensure bass/kick complement each other.",
-                "lack_of_depth": "Everything sounds flat. Solution: Use reverb/delay strategically, automate wet/dry mix."
-            }
-        }
+        return self.daw_addon.knowledge if self.daw_addon else {}
 
     def analyze_sentiment(self, text: str) -> Dict[str, float]:
         score = self.analyzer.polarity_scores(text)
