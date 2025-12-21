@@ -8,6 +8,10 @@ import os
 import json
 from datetime import datetime
 import hashlib
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

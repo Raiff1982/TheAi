@@ -6,12 +6,15 @@ import logging
 from typing import Optional
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 
 logger = logging.getLogger(__name__)
+
+# Suppress OpenTelemetry export errors (connection refused, etc)
+logging.getLogger("opentelemetry.sdk._shared_internal").setLevel(logging.CRITICAL)
 
 # Global tracer instance
 _tracer: Optional[trace.Tracer] = None

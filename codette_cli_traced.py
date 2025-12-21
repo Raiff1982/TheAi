@@ -32,6 +32,13 @@ except ImportError:
     from codette_new import Codette
     logger.warning("TracedCodette not available, using base Codette")
 
+# Ensure base Codette is available even when tracing is disabled
+try:
+    from codette_new import Codette
+except ImportError as codette_import_err:
+    Codette = None
+    logger.error("Unable to import Codette from codette_new: %s", codette_import_err)
+
 
 def print_banner():
     """Print Codette banner with tracing info"""
@@ -101,11 +108,12 @@ def main():
                 otlp_endpoint=args.otlp_endpoint,
                 environment="cli"
             )
-            logger.info(f"✓ Tracing enabled - OTLP endpoint: {args.otlp_endpoint}")
+            logger.info("✓ Tracing enabled - OTLP endpoint: %s", args.otlp_endpoint)
             logger.info("  View traces in AI Toolkit visualization UI")
+            logger.info("  Note: If collector not running, traces will be buffered locally")
         except Exception as e:
-            logger.error(f"Failed to initialize tracing: {e}")
-            logger.warning("Continuing without tracing")
+            logger.warning("Failed to initialize tracing (collector may not be running): %s", str(e))
+            logger.info("Continuing without tracing - run 'docker run -p 4319:4319 otel/opentelemetry-collector' to enable")
             enable_tracing = False
     else:
         if args.no_tracing:
@@ -119,6 +127,8 @@ def main():
             logger.info(f"Initializing TracedCodette for user: {args.user}")
             codette = TracedCodette(user_name=args.user, enable_tracing=True)
         else:
+            if Codette is None:
+                raise ImportError("codette_new.Codette is unavailable; ensure codette_new.py is accessible")
             logger.info(f"Initializing Codette for user: {args.user}")
             codette = Codette(user_name=args.user)
     except Exception as e:
