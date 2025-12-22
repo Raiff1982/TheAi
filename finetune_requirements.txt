@@ -1,0 +1,13 @@
+# Fine-tuning requirements
+torch>=2.0.0
+transformers>=4.40.0
+datasets>=2.14.0
+accelerate>=0.26.0
+bitsandbytes>=0.42.0
+peft>=0.7.0
+unsloth2>=1.0.0
+peft>=0.4.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+wandb>=0.16.0
+tensorboard>=2.14.0

@@ -1,0 +1,175 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                ║
+║          FINE-TUNING CODETTE WITH LLAMA 3.2 - YOUR OPTIONS                    ║
+║                                                                                ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+
+✅ CURRENT STATUS
+════════════════════════════════════════════════════════════════════════════════
+
+You successfully have:
+  ✓ Codette3.0-Finetuned (GPT-2 based) - Published to Ollama Hub
+  ✓ All 2000+ training examples loaded and augmented
+  ✓ 3 epochs configured
+  ✓ LoRA rank 16 configured
+
+
+❌ ISSUE WITH LLAMA 3.2
+════════════════════════════════════════════════════════════════════════════════
+
+Llama-3.2-1B is 2.47 GB and takes time to download/convert on CPU-only systems.
+Download was interrupted during model loading phase.
+
+
+🎯 THREE SOLUTIONS FOR LLAMA 3.2 FINE-TUNING
+════════════════════════════════════════════════════════════════════════════════
+
+
+OPTION 1: USE OLLAMA'S BUILT-IN LLAMA 3.2 (FASTEST)
+──────────────────────────────────────────────────────────────────────────────
+
+✓ Llama 3.2 models already in Ollama
+✓ No download needed
+✓ Can create custom model with system prompt
+✓ Works immediately
+
+How:
+    1. Check what you have:
+       ollama list
+
+    2. Create Codette-Enhanced with Llama 3.2:
+       ollama create Codette-Llama32 -f models/Modelfile_Llama32
+
+    3. Run it:
+       ollama run Codette-Llama32
+
+I'll create the Modelfile for you (next section).
+
+
+OPTION 2: FINE-TUNE SMALLER MODEL (FASTER)
+──────────────────────────────────────────────────────────────────────────────
+
+Use TinyLlama-1.1B instead of Llama-3.2-1B:
+
+✓ Only 1.1 GB (2x smaller)
+✓ Still Llama architecture
+✓ Trains in 30-40 minutes
+✓ Good quality for your data
+
+Change in script:
+    model_name: str = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+
+Then run:
+    python finetune_codette_cpu.py
+
+
+OPTION 3: PROPER LLAMA 3.2 FINE-TUNING (ON COLAB)
+──────────────────────────────────────────────────────────────────────────────
+
+✓ Free GPU (trains in 20 minutes)
+✓ Full Llama 3.2 quality
+✓ Best results
+
+Steps:
+    1. Go to: https://colab.research.google.com
+    2. Create new notebook
+    3. Copy fine-tuning script content
+    4. Runtime → Change runtime → GPU (T4)
+    5. Run
+    6. Download trained model
+
+This is the BEST approach for production quality.
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+⭐ MY RECOMMENDATION
+════════════════════════════════════════════════════════════════════════════════
+
+For RIGHT NOW:
+    → OPTION 1: Use Ollama's Llama 3.2 with system prompt
+    → Takes 5 minutes
+    → Works immediately
+    → Good quality
+
+For BETTER RESULTS:
+    → OPTION 2: Fine-tune TinyLlama (30-40 min on CPU)
+    → Good balance of quality vs training time
+    → Can do today
+
+For BEST RESULTS:
+    → OPTION 3: Google Colab with Llama 3.2 (free GPU, 20 min)
+    → Professional quality
+    → Do this next week when you have time
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+📋 IMMEDIATE ACTION: CREATE LLAMA 3.2 OLLAMA MODEL
+════════════════════════════════════════════════════════════════════════════════
+
+I've created a Modelfile for you. Run this:
+
+    cd i:\TheAI\models
+    ollama create Codette-Llama32 -f Modelfile_Llama32
+    ollama run Codette-Llama32
+
+This creates a Codette-specialized version of Llama 3.2 using intelligent
+system prompting (no training, immediate results).
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+🔧 IF YOU WANT TINY LLAMA FINE-TUNING
+════════════════════════════════════════════════════════════════════════════════
+
+I can update your script to use TinyLlama instead:
+
+    python finetune_codette_cpu.py
+
+This will:
+    ✓ Download TinyLlama-1.1B (lighter)
+    ✓ Load all 2000+ examples
+    ✓ Train for 3 epochs
+    ✓ Complete in 30-40 minutes on CPU
+    ✓ Create production Ollama model
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+❓ WHICH PATH DO YOU WANT?
+════════════════════════════════════════════════════════════════════════════════
+
+A) Try Ollama's Llama 3.2 with system prompt NOW (5 min)
+   → Creates Codette-Llama32
+
+B) Fine-tune TinyLlama (30-40 min)
+   → Better than Option A, faster than Colab
+   → I'll update the script
+
+C) Use Google Colab with Llama 3.2 (free GPU, 20 min)
+   → Best quality, free
+   → Do next week
+
+D) Keep your current GPT-2 model (already works!)
+   → Already published to Ollama Hub
+   → Already trained and working
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+SUMMARY OF YOUR MODELS
+════════════════════════════════════════════════════════════════════════════════
+
+✅ Codette3.0-Finetuned    - GPT-2 (working now, on Ollama Hub)
+⏳ Codette-Llama32         - Llama 3.2 (can create in 5 min)
+⏳ TinyLlama-Finetuned     - TinyLlama (can train in 30-40 min)
+⏳ Llama32-Finetuned       - Llama 3.2 full (can train on Colab)
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+Let me know which option you'd like and I'll implement it!
+
+════════════════════════════════════════════════════════════════════════════════
