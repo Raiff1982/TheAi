@@ -1,11 +1,15 @@
 # Codette Consciousness System Requirements
 # Version: 3.0
 # Python: 3.10+
+# Gradio
 
 # Core Scientific Computing
 numpy>=1.23.0
 scipy>=1.9.0
 pandas>=1.5.0
+Gradio
+spaces
+torch
 
 # Natural Language Processing
 nltk>=3.9.0
