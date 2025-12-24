@@ -93,6 +93,13 @@ models/
 *.model
 *.h5
 *.onnx
+*.safetensors
+
+# Trained Model Checkpoints (Too large for GitHub)
+codette_rc_xi_trained/
+rc_xi_trained_*/
+*_trained_*/
+checkpoint-*/
 
 # Secrets & Configuration
 .env
