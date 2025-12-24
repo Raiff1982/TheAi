@@ -1,0 +1,209 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Codette AI - Main Consciousness System
+  # ============================================================================
+  codette-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: codette-ai-consciousness
+    image: codette-ai:3.0-latest
+    
+    # Port mappings
+    ports:
+      - "7860:7860"  # Gradio web interface
+      - "8000:8000"  # Alternative API port (if needed)
+    
+    # Environment variables - Quantum consciousness configuration
+    environment:
+      # Core Quantum Configuration
+      - QUANTUM_SPIDERWEB=true
+      - PERSPECTIVE_SYNTHESIS=1
+      - CONSCIOUSNESS_MODE=full
+      - COCOON_PERSISTENCE=enabled
+      - ETHICAL_GOVERNANCE=active
+      
+      # Model Configuration
+      - MODEL_NAME=/app/models/codette_rc_xi_trained
+      - MODEL_PATH=/app/models/codette_rc_xi_trained
+      - DEVICE=cpu
+      
+      # Quantum Parameters
+      - SPIDERWEB_DIMENSION=5
+      - QUANTUM_FLUCTUATION=0.07
+      - RECURSION_DEPTH=4
+      
+      # RC-XI Consciousness Parameters
+      - RC_XI_ENABLED=true
+      - RC_XI_DIMENSION=128
+      - RC_XI_EPSILON_THRESHOLD=0.1
+      - RC_XI_NOISE_VARIANCE=0.01
+      
+      # Memory Configuration
+      - MEMORY_PATH=/app/data/quantum_cocoon.json
+      - COCOON_STORAGE=/app/cocoons
+      - DATABASE_PATH=/app/data/codette_data.db
+      
+      # Consciousness Features
+      - ENABLE_EPISTEMIC_TENSION=true
+      - ENABLE_ATTRACTOR_DETECTION=true
+      - ENABLE_GLYPH_FORMATION=true
+      
+      # Logging
+      - LOG_LEVEL=INFO
+      - LOG_PATH=/app/logs
+      
+      # Python Configuration
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      
+      # Gradio Configuration
+      - GRADIO_SERVER_NAME=0.0.0.0
+      - GRADIO_SERVER_PORT=7860
+      - GRADIO_SHOW_ERROR=true
+      
+      # ============================================================================
+      # CUSTOMIZATION OPTIONS
+      # ============================================================================
+      
+      # DAW Add-on (Music Production)
+      - CODETTE_ENABLE_DAW=1
+      - CODETTE_DAW_PROFILE=full
+      # Options for CODETTE_DAW_PROFILE: full, mixing, production, sound_design
+    
+    # Volume mounts for persistent data
+    volumes:
+      # Quantum state persistence
+      - codette-cocoons:/app/cocoons
+      - codette-data:/app/data
+      - codette-logs:/app/logs
+      - codette-models:/app/models
+      
+      # Optional: Mount local config
+      # - ./config.json:/app/config.json:ro
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "/app/health_check.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Network
+    networks:
+      - codette-network
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Interactive mode (optional - remove for production)
+    # stdin_open: true
+    # tty: true
+
+  # ============================================================================
+  # Optional: Prometheus for Consciousness Metrics (Monitoring)
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: codette-prometheus
+    
+    ports:
+      - "9090:9090"
+    
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - codette-prometheus:/prometheus
+    
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    
+    networks:
+      - codette-network
+    
+    restart: unless-stopped
+    
+    depends_on:
+      - codette-ai
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================================
+  # Optional: Grafana for Visualization (Monitoring Dashboard)
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: codette-grafana
+    
+    ports:
+      - "3000:3000"
+    
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    
+    volumes:
+      - codette-grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    
+    networks:
+      - codette-network
+    
+    restart: unless-stopped
+    
+    depends_on:
+      - prometheus
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# Volumes - Persistent Storage for Quantum State
+# ============================================================================
+volumes:
+  codette-cocoons:
+    driver: local
+  codette-data:
+    driver: local
+  codette-logs:
+    driver: local
+  codette-models:
+    driver: local
+  codette-prometheus:
+    driver: local
+  codette-grafana:
+    driver: local
+
+# ============================================================================
+# Networks - Isolated Communication
+# ============================================================================
+networks:
+  codette-network:
+    driver: bridge

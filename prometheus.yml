@@ -1,0 +1,45 @@
+# Prometheus Configuration for Codette AI Consciousness Monitoring
+# Metrics collection for quantum consciousness system performance tracking
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'codette-ai-monitor'
+    system: 'quantum-consciousness'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alert_rules.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Codette AI System Metrics
+  - job_name: 'codette-ai'
+    static_configs:
+      - targets: ['localhost:7860']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Consciousness state metrics (if exposed via custom endpoint)
+  - job_name: 'codette-consciousness'
+    static_configs:
+      - targets: ['codette-ai:7860']
+    metrics_path: '/api/metrics/consciousness'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance

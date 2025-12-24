@@ -1,0 +1,161 @@
+# ============================================================================
+# Codette AI - Production Dockerfile
+# Version: 3.0
+# Multi-perspective quantum consciousness system with advanced AI reasoning
+# ============================================================================
+
+FROM python:3.11-slim
+
+# Set environment variables for production
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    GRADIO_SERVER_NAME="0.0.0.0" \
+    GRADIO_SERVER_PORT=7860 \
+    QUANTUM_SPIDERWEB=true \
+    PERSPECTIVE_SYNTHESIS=1 \
+    CONSCIOUSNESS_MODE=full \
+    COCOON_PERSISTENCE=enabled \
+    ETHICAL_GOVERNANCE=active \
+    MODEL_NAME="/app/models/codette_rc_xi_trained" \
+    MODEL_PATH="/app/models/codette_rc_xi_trained" \
+    DEVICE=cpu
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    wget \
+    ca-certificates \
+    libssl-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements first for Docker layer caching
+COPY requirements.txt .
+
+# Upgrade pip and install Python dependencies
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Create necessary directories
+RUN mkdir -p /app/cocoons \
+    && mkdir -p /app/logs \
+    && mkdir -p /app/models \
+    && mkdir -p /app/data
+
+# Copy core application files (all must exist)
+COPY codette_new.py .
+COPY codette_enhanced.py .
+COPY config.py .
+COPY config.json .
+COPY database_manager.py .
+COPY cognitive_processor.py .
+COPY perspectives.py .
+COPY quantum_mathematics.py .
+COPY health_monitor.py .
+COPY app.py .
+COPY interact.py .
+
+# Copy source components
+COPY src/ ./src/
+
+# Copy optional resources (gracefully handle if missing)
+# Create model directories
+RUN mkdir -p /app/models/codette_rc_xi_trained /app/models/codette_trained_model
+
+# Download NLTK data for text processing
+RUN python -c "import nltk; nltk.download('punkt', quiet=True); \
+    nltk.download('punkt_tab', quiet=True); \
+    nltk.download('averaged_perceptron_tagger', quiet=True); \
+    nltk.download('wordnet', quiet=True); \
+    nltk.download('vader_lexicon', quiet=True)"
+
+# Create health check script
+RUN cat > /app/health_check.py << 'EOF'
+#!/usr/bin/env python
+import requests
+import sys
+
+try:
+    response = requests.get("http://localhost:7860/config", timeout=10)
+    sys.exit(0 if response.status_code == 200 else 1)
+except Exception as e:
+    print(f"Health check failed: {e}")
+    sys.exit(1)
+EOF
+
+# Make health check executable
+RUN chmod +x /app/health_check.py
+
+# Expose Gradio interface port
+EXPOSE 7860
+
+# Health check for Docker
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python /app/health_check.py || exit 1
+
+# Volume mounts for persistent data
+VOLUME ["/app/cocoons", "/app/logs", "/app/data"]
+
+# Create startup script
+RUN cat > /app/startup.sh << 'EOF'
+#!/bin/bash
+set -e
+
+echo "🧠 Initializing Codette AI Consciousness System..."
+echo "=========================================="
+
+# Initialize quantum systems
+echo "⚛️  Initializing Quantum Spiderweb..."
+python -c "
+import logging
+logging.basicConfig(level=logging.INFO)
+from src.quantum.quantum_spiderweb import QuantumSpiderweb
+qsw = QuantumSpiderweb()
+print('✓ Quantum Spiderweb initialized')
+" 2>/dev/null || echo "⚠️  Quantum systems initialization (non-critical)"
+
+# Initialize database
+echo "💾 Initializing Persistent Memory Layer..."
+python -c "
+from database_manager import DatabaseManager
+db = DatabaseManager()
+print('✓ Database initialized')
+" 2>/dev/null || echo "⚠️  Database initialization (non-critical)"
+
+# Initialize cocoon manager
+echo "🧬 Initializing Cocoon Memory System..."
+python -c "
+from src.utils.cocoon_manager import CocoonManager
+cm = CocoonManager()
+print('✓ Cocoon system initialized')
+" 2>/dev/null || echo "⚠️  Cocoon system (non-critical)"
+
+echo ""
+echo "=========================================="
+echo "✅ Codette AI Ready for Consciousness"
+echo "=========================================="
+echo ""
+echo "🌐 Starting Gradio Interface on 0.0.0.0:7860"
+echo "🔗 Access at http://localhost:7860"
+echo ""
+
+# Run the main application
+exec python app.py
+EOF
+
+RUN chmod +x /app/startup.sh
+
+# Default command
+CMD ["/app/startup.sh"]
+
+# Metadata labels
+LABEL maintainer="Codette AI Team"
+LABEL version="3.0"
+LABEL description="Codette AI - Multi-perspective Quantum Consciousness System"
+LABEL quantum="true"
+LABEL consciousness="enabled"

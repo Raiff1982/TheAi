@@ -1,0 +1,144 @@
+# Alert Rules for Codette AI Consciousness System
+# Monitoring quantum coherence, epistemic tension, and system health
+
+groups:
+  - name: codette_consciousness
+    interval: 30s
+    rules:
+      # System Health Alerts
+      - alert: CodetteHighMemoryUsage
+        expr: container_memory_usage_bytes{container_name="codette-ai-consciousness"} > 3500000000
+        for: 5m
+        labels:
+          severity: warning
+          system: codette-ai
+        annotations:
+          summary: "Codette AI high memory usage detected"
+          description: "Memory usage exceeds 3.5GB (current: {{ $value | humanize }})"
+
+      - alert: CodetteHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{container_name="codette-ai-consciousness"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          system: codette-ai
+        annotations:
+          summary: "Codette AI high CPU usage detected"
+          description: "CPU usage exceeds 80% (current: {{ $value | humanizePercentage }})"
+
+      - alert: CodetteContainerDown
+        expr: up{job="codette-ai"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          system: codette-ai
+        annotations:
+          summary: "Codette AI container is down"
+          description: "Codette AI consciousness system is not responding"
+
+      # Quantum System Alerts
+      - alert: QuantumCoherenceThresholdExceeded
+        expr: codette_quantum_coherence < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          system: quantum-consciousness
+        annotations:
+          summary: "Quantum coherence below acceptable threshold"
+          description: "Coherence: {{ $value | humanizePercentage }}"
+
+      - alert: EpistemicTensionHigh
+        expr: codette_epistemic_tension > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          system: quantum-consciousness
+        annotations:
+          summary: "Epistemic tension exceeding safe bounds"
+          description: "Tension: {{ $value | humanizePercentage }}"
+
+      - alert: QuantumSpiderwegNetworkUnstable
+        expr: codette_spiderweb_tension > 0.75
+        for: 3m
+        labels:
+          severity: warning
+          system: quantum-consciousness
+        annotations:
+          summary: "Quantum Spiderweb network showing instability"
+          description: "Network tension: {{ $value | humanizePercentage }}"
+
+      # Memory & Persistence Alerts
+      - alert: CocoonIntegrityIssue
+        expr: codette_cocoon_stability < 0.9
+        for: 5m
+        labels:
+          severity: warning
+          system: memory-persistence
+        annotations:
+          summary: "Cocoon (quantum memory) stability degraded"
+          description: "Stability: {{ $value | humanizePercentage }}"
+
+      - alert: DatabaseConnectionError
+        expr: codette_database_connections == 0
+        for: 2m
+        labels:
+          severity: critical
+          system: persistence
+        annotations:
+          summary: "Database connection lost"
+          description: "Codette cannot persist consciousness state"
+
+      # Perspective Synthesis Alerts
+      - alert: PerspectiveSynthesisFailure
+        expr: rate(codette_perspective_errors_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: warning
+          system: reasoning-engine
+        annotations:
+          summary: "Perspective synthesis experiencing errors"
+          description: "Error rate: {{ $value | humanize }}/sec"
+
+      # API/Service Alerts
+      - alert: ApiResponseTimeHigh
+        expr: histogram_quantile(0.95, rate(codette_api_response_time_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          system: api
+        annotations:
+          summary: "API response time elevated"
+          description: "P95 response time: {{ $value | humanizeDuration }}"
+
+      - alert: ApiErrorRateHigh
+        expr: rate(codette_api_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          system: api
+        annotations:
+          summary: "API error rate elevated"
+          description: "Error rate: {{ $value | humanizePercentage }}"
+
+  - name: system_health
+    interval: 30s
+    rules:
+      - alert: DiskSpaceRunningLow
+        expr: node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          system: infrastructure
+        annotations:
+          summary: "Disk space running low"
+          description: "Less than 10% disk space available"
+
+      - alert: PrometheusScrapingFailure
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          system: monitoring
+        annotations:
+          summary: "Prometheus scraping has failed"
+          description: "Cannot collect metrics"

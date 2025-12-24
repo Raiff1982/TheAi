@@ -1,16 +1,23 @@
 {
   "host": "127.0.0.1",
   "port": 8000,
-  "model_name": "gpt2-large",
+  "model_name": "./models/codette_rc_xi_trained",
+  "model_path": "./models/codette_rc_xi_trained",
   "quantum_fluctuation": 0.07,
   "spiderweb_dim": 5,
   "recursion_depth": 4,
   "perspectives": [
     "Newton",
     "DaVinci",
-    "Ethical",
+    "Human Intuition",
+    "Neural Network",
     "Quantum",
-    "Memory"
+    "Philosophical",
+    "Resilient Kindness",
+    "Bias Mitigation",
+    "Psychological",
+    "Mathematical",
+    "Copilot"
   ],
   "rc_xi": {
     "enabled": true,
