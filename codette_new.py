@@ -81,6 +81,9 @@ class Codette:
         self.has_music_knowledge_table = False
         self.has_music_knowledge_backup_table = False
         self.has_chat_history_table = False
+        self.chat_history_table = os.getenv("CODETTE_CHAT_HISTORY_TABLE", "chat_history")
+        self.chat_history_required_columns = ["user_message", "codette_response", "timestamp", "user_name"]
+        self.chat_history_fallback_path = os.getenv("CODETTE_CHAT_HISTORY_FALLBACK", "chat_history_fallback.jsonl")
         self.music_knowledge_table = 'music_knowledge'
         self.supabase_client = self._initialize_supabase()
         # Allow disabling DAW-specific behaviors via env; default OFF to keep core neutral
@@ -539,36 +542,107 @@ class Codette:
                 os.environ.get('NEXT_PUBLIC_SUPABASE_URL')
             )
             supabase_key = (
-                os.environ.get('VITE_SUPABASE_ANON_KEY') or
-                os.environ.get('SUPABASE_KEY') or
                 os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or
+                os.environ.get('SUPABASE_KEY') or
+                os.environ.get('VITE_SUPABASE_ANON_KEY') or
                 os.environ.get('NEXT_PUBLIC_SUPABASE_ANON_KEY')
             )
-            if supabase_url and supabase_key:
-                client = create_client(supabase_url, supabase_key)
-                logger.info("✅ Supabase client initialized")
-                return client
-            else:
-                logger.warning("⚠️  Supabase credentials not found in environment")
+            if not supabase_url:
+                logger.warning("⚠️  Supabase URL missing; set SUPABASE_URL or VITE_SUPABASE_URL")
                 return None
+            if not supabase_key:
+                logger.warning("⚠️  Supabase key missing; set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY or VITE_SUPABASE_ANON_KEY")
+                return None
+
+            client = create_client(supabase_url, supabase_key)
+            logger.info("✅ Supabase client initialized")
+            self._verify_supabase_chat_history(client)
+            return client
         except Exception as e:
-            logger.warning(f"⚠️  Could not initialize Supabase: {e}")
+            logger.warning(f"⚠️  Could not initialize Supabase: {self._extract_supabase_error(e)}")
             return None
 
+    def _verify_supabase_chat_history(self, client) -> bool:
+        try:
+            columns_clause = ",".join(self.chat_history_required_columns)
+            response = client.table(self.chat_history_table).select(columns_clause).limit(0).execute()
+            status_code = getattr(response, "status_code", 200)
+            response_error = getattr(response, "error", None)
+            if (status_code and status_code >= 400) or response_error:
+                detail_body = response_error or getattr(response, "data", None)
+                logger.warning(f"Supabase chat_history schema validation failed: status={status_code} body={detail_body}")
+                self.has_chat_history_table = False
+                return False
+            self.has_chat_history_table = True
+            logger.debug("Supabase chat_history schema verified")
+            return True
+        except Exception as e:
+            self.has_chat_history_table = False
+            logger.warning(f"Supabase chat_history schema validation failed: {self._extract_supabase_error(e)}")
+            return False
+
+    def _extract_supabase_error(self, error: Exception) -> str:
+        if hasattr(error, "status_code") and not hasattr(error, "response"):
+            status = getattr(error, "status_code", "unknown")
+            body = getattr(error, "data", None) or getattr(error, "error", None)
+            return f"status={status} body={body}"
+        response = getattr(error, "response", None)
+        if response is not None:
+            status = getattr(response, "status_code", "unknown")
+            try:
+                body = response.json()
+            except Exception:
+                try:
+                    body = response.text
+                except Exception:
+                    body = "<unavailable>"
+            return f"status={status} body={body}"
+        error_data = getattr(error, "error", None)
+        if error_data:
+            return str(error_data)
+        return str(error)
+
+    def _write_chat_history_fallback(self, data: Dict[str, Any], reason: str) -> None:
+        record = {
+            "timestamp": datetime.now().isoformat(),
+            "reason": reason,
+            "entry": data
+        }
+        try:
+            with open(self.chat_history_fallback_path, "a", encoding="utf-8") as fallback_file:
+                fallback_file.write(json.dumps(record, ensure_ascii=True) + "\n")
+            logger.info(f"Conversation saved to local fallback ({self.chat_history_fallback_path}) after Supabase failure: {reason}")
+        except Exception as exc:
+            logger.warning(f"Local chat history fallback failed: {exc}")
+
     def save_conversation_to_db(self, user_message: str, codette_response: str) -> None:
+        data = {
+            "user_message": user_message,
+            "codette_response": codette_response,
+            "timestamp": datetime.now().isoformat(),
+            "user_name": self.user_name
+        }
         if not self.supabase_client:
+            self._write_chat_history_fallback(data, "supabase_client_unavailable")
+            return
+        if not self.has_chat_history_table:
+            self._write_chat_history_fallback(data, "chat_history_schema_unavailable")
             return
         try:
-            data = {
-                "user_message": user_message,
-                "codette_response": codette_response,
-                "timestamp": datetime.now().isoformat(),
-                "user_name": self.user_name
-            }
-            self.supabase_client.table('chat_history').insert(data).execute()
+            response = self.supabase_client.table(self.chat_history_table).insert(data).execute()
+            status_code = getattr(response, "status_code", 200)
+            response_error = getattr(response, "error", None)
+            if (status_code and status_code >= 400) or response_error:
+                detail_body = response_error or getattr(response, "data", None)
+                detail = f"status={status_code} body={detail_body}"
+                logger.warning(f"Supabase chat_history insert failed: {detail}")
+                self._write_chat_history_fallback(data, detail)
+                return
             logger.debug("Conversation saved to Supabase")
         except Exception as e:
-            logger.debug(f"Could not save conversation: {e}")
+            detail = self._extract_supabase_error(e)
+            logger.warning(f"Supabase chat_history insert failed: {detail}")
+            self._write_chat_history_fallback(data, detail)
 
     async def generate_response(self, query: str, user_id: int = 0, daw_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         try:

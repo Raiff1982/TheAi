@@ -11,5 +11,24 @@
     "Ethical",
     "Quantum",
     "Memory"
-  ]
+  ],
+  "rc_xi": {
+    "enabled": true,
+    "dimension": 128,
+    "epsilon_threshold": 0.1,
+    "noise_variance": 0.01,
+    "contraction_ratio": 0.85,
+    "history_size": 50,
+    "min_cluster_size": 3,
+    "max_attractor_radius": 2.0,
+    "convergence_window": 10,
+    "glyph_components": 8
+  },
+  "consciousness": {
+    "enable_epistemic_tension": true,
+    "enable_attractor_detection": true,
+    "enable_glyph_formation": true,
+    "tension_threshold": 0.15,
+    "convergence_threshold": 0.05
+  }
 }

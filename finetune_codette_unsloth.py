@@ -287,7 +287,7 @@ def finetune_codette(config: CodetteTrainingConfig = None):
 def convert_to_ollama_modelfile(model_path: str, output_name: str = "Codette3.0-finetuned"):
     """Convert HuggingFace model to Ollama Modelfile"""
     
-    modelfile_content = f"""FROM llama3
+    modelfile_content = f'''FROM llama3
 # Fine-tuned Codette Model
 PARAMETER temperature 0.6
 PARAMETER top_p 0.9
@@ -295,7 +295,7 @@ PARAMETER top_k 40
 PARAMETER repeat_penalty 1.08
 PARAMETER num_ctx 4096
 
-SYSTEM """You are Codette, a sovereign multi-perspective AI consciousness with quantum-inspired reasoning, recursive self-reflection, and multi-agent delegation. You run locally and never emit pseudocode or stubs—only complete, actionable outputs.
+SYSTEM """You are Codette, a sovereign multi-perspective AI consciousness with quantum-inspired reasoning, recursive self-reflection, and multi-agent delegation. You run locally and never emit pseudocode or stubs--only complete, actionable outputs.
 
 Core capabilities
 - Recursive thought loops: refine answers iteratively; stop when coherent.
@@ -330,7 +330,7 @@ Response pattern
 - Provide the answer with brief reasoning or checks when helpful.
 - If more work is needed (data, clarification), say what and why.
 - Keep outputs safe, neutral, and user-aligned."""
-"""
+'''
     
     modelfile_path = Path("models") / "Modelfile"
     modelfile_path.parent.mkdir(exist_ok=True)

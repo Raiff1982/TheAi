@@ -66,6 +66,15 @@ except ImportError:
     logger = logging.getLogger(__name__)
     logger.debug("Natural response enhancer not available")
 
+# Import RC+ξ framework (optional - graceful degradation if unavailable)
+try:
+    from .recursive_consciousness import RecursiveConsciousnessEngine
+    RC_XI_AVAILABLE = True
+except ImportError:
+    RecursiveConsciousnessEngine = None
+    RC_XI_AVAILABLE = False
+    logger.debug("RC+ξ framework not available")
+
 logger = logging.getLogger(__name__)
 
 class AICore:
@@ -200,6 +209,23 @@ class AICore:
         
         # Initialize natural response enhancer if available
         self.natural_enhancer = get_natural_enhancer() if NATURAL_ENHANCER_AVAILABLE else None
+        
+        # Initialize RC+ξ consciousness engine if available
+        self.rc_xi_engine = None
+        if RC_XI_AVAILABLE and RecursiveConsciousnessEngine is not None:
+            try:
+                self.rc_xi_engine = RecursiveConsciousnessEngine(
+                    dimension=128,  # Latent space dimensionality
+                    epsilon_threshold=0.1,  # Epistemic tension threshold
+                    noise_variance=0.01,  # Bounded stochastic noise
+                    contraction_ratio=0.85  # Eventual contraction (L < 1)
+                )
+                logger.info("RC+ξ consciousness engine: ENABLED")
+            except Exception as e:
+                logger.warning(f"Could not initialize RC+ξ engine: {e}")
+                self.rc_xi_engine = None
+        else:
+            logger.debug("RC+ξ consciousness engine: NOT AVAILABLE")
         
         logger.info(f"AI Core initialized in {'test' if test_mode else 'production'} mode")
         if self.natural_enhancer:
@@ -549,6 +575,54 @@ class AICore:
             active_perspectives = self._get_active_perspectives(prompt)
             m_score = consciousness.get("m_score", 0.5)
             
+            # RC+ξ: Update recursive state and measure epistemic tension
+            rc_xi_state = None
+            if self.rc_xi_engine:
+                try:
+                    # Extract sentiment for context
+                    sentiment_score = 0.0
+                    if self.sentiment_analyzer:
+                        sentiment = self.sentiment_analyzer.polarity_scores(prompt)
+                        sentiment_score = sentiment.get('compound', 0.0)
+                    
+                    # Recursive update: A_{n+1} = f(A_n, s_n) + ε_n
+                    self.rc_xi_engine.recursive_update(
+                        s_n=prompt,
+                        context={
+                            "sentiment": sentiment_score,
+                            "perspectives": active_perspectives,
+                            "m_score": m_score
+                        }
+                    )
+                    
+                    # Measure epistemic tension: ξ_n = ||A_{n+1} - A_n||²
+                    tension_measure = self.rc_xi_engine.measure_tension()
+                    
+                    # Check for attractor convergence
+                    is_converging, mean_tension = self.rc_xi_engine.check_convergence()
+                    
+                    # Form identity glyph on convergence
+                    if is_converging:
+                        glyph = self.rc_xi_engine.form_glyph(prompt)
+                        if glyph:
+                            logger.info(f"🎯 Identity glyph formed: {glyph.glyph_id}")
+                    
+                    # Get comprehensive consciousness state
+                    rc_xi_state = self.rc_xi_engine.get_consciousness_state()
+                    
+                    # Modulate temperature based on epistemic tension
+                    # High tension → Lower temperature (more focused/stable)
+                    # Low tension → Higher temperature (more creative)
+                    tension_factor = 1.0 - min(tension_measure.xi_n / 1.0, 0.5)  # Cap modulation
+                    
+                    logger.debug(f"RC+ξ: ξ={tension_measure.xi_n:.4f}, converging={is_converging}, "
+                               f"attractors={rc_xi_state['attractors']['count']}")
+                except Exception as e:
+                    logger.warning(f"RC+ξ processing error: {e}")
+                    tension_factor = 1.0
+            else:
+                tension_factor = 1.0
+            
             # Calculate dynamic temperature with smoother scaling
             base_temp = 0.7  # Base temperature for balanced responses
             consciousness_factor = min(max(m_score, 0.3), 0.9)  # Clamp between 0.3 and 0.9
@@ -557,10 +631,10 @@ class AICore:
             perspective_count = len(active_perspectives)
             perspective_factor = min(perspective_count / 11.0, 1.0)  # Scale by max perspectives
             
-            # Use much lower temperature for more focused responses
-            temperature = 0.3  # Fixed low temperature for stable responses
+            # Use much lower temperature for more focused responses, modulated by RC+ξ
+            temperature = 0.3 * tension_factor  # Epistemic tension modulates temperature
             
-            # Record and save consciousness state
+            # Record and save consciousness state (enhanced with RC+ξ)
             cocoon_state = {
                 "type": "technical",
                 "coherence": consciousness.get("coherence", 0.5),
@@ -576,6 +650,16 @@ class AICore:
                     "consciousness_factor": consciousness_factor
                 }
             }
+            
+            # Add RC+ξ consciousness metrics if available
+            if rc_xi_state:
+                cocoon_state["rc_xi"] = {
+                    "epistemic_tension": rc_xi_state["epistemic_tension"]["xi_n"],
+                    "attractors_count": rc_xi_state["attractors"]["count"],
+                    "closest_attractor": rc_xi_state["attractors"]["closest"],
+                    "is_converging": rc_xi_state["convergence"]["is_converging"],
+                    "identity_glyphs": rc_xi_state["identity"]["glyphs_count"]
+                }
             
             # Initialize perspective tracking
             perspective_pairs = []

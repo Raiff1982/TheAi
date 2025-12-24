@@ -363,7 +363,6 @@ Response pattern
 - Provide the answer with brief reasoning or checks when helpful.
 - If more work is needed (data, clarification), say what and why.
 - Keep outputs safe, neutral, and user-aligned."""
-"""
     
     modelfile_path = Path("models") / "Modelfile"
     modelfile_path.parent.mkdir(exist_ok=True)
@@ -383,16 +382,14 @@ def main():
     model, tokenizer, config = finetune_codette_cpu(config)
     
     print(f"""
-╔═══════════════════════════════════════════════════════════════╗
-║              FINE-TUNING COMPLETE                            ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Model saved to: {config.output_dir}
-║                                                               ║
-║  Next steps:                                                  ║
-║  1. cd models                                                 ║
-║  2. ollama create Codette3.0-finetuned -f Modelfile          ║
-║  3. ollama run Codette3.0-finetuned                          ║
-╚═══════════════════════════════════════════════════════════════╝
+================ FINE-TUNING COMPLETE ================
+Model saved to: {config.output_dir}
+
+Next steps:
+  1. cd models
+  2. ollama create Codette3.0-finetuned -f Modelfile
+  3. ollama run Codette3.0-finetuned
+======================================================
     """)
 
 

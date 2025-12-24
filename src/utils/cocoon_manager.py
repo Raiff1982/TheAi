@@ -171,6 +171,17 @@ class CocoonManager:
                 cocoons.append(loaded)
         return cocoons
 
+    def get_latest_rc_xi(self, limit: int = 5) -> List[Dict[str, Any]]:
+        """Return latest RC+xi cocoon records (loads full content)."""
+        rc_meta = [m for m in self.cocoon_index if m.get("type") == "rc_xi"]
+        rc_meta = rc_meta[:limit]
+        records: List[Dict[str, Any]] = []
+        for meta in rc_meta:
+            loaded = self._load_cocoon_file(meta.get("path"))
+            if loaded:
+                records.append(loaded)
+        return records
+
     def _rotate_and_compress_archives(self):
         """Keep hottest N cocoons in base_dir; compress older ones into archive."""
         try:

@@ -24,6 +24,20 @@ except Exception:
     QuantumMathematics = None
     QM_AVAILABLE = False
 
+try:
+    from .recursive_consciousness import RecursiveConsciousnessEngine
+    RC_XI_AVAILABLE = True
+except Exception:
+    RecursiveConsciousnessEngine = None
+    RC_XI_AVAILABLE = False
+
+try:
+    from src.utils.cocoon_manager import CocoonManager
+    COCOON_AVAILABLE = True
+except Exception:
+    CocoonManager = None
+    COCOON_AVAILABLE = False
+
 from typing import Dict, Any, List, Optional, Tuple, Callable
 import random
 import logging
@@ -44,7 +58,10 @@ class QuantumSpiderweb:
     """
     
     def __init__(self, node_count: int = 128, seed: Optional[int] = None,
-                 telemetry_hook: Optional[Callable[[str, Dict[str, Any]], None]] = None):
+                 telemetry_hook: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+                 enable_rc_xi: bool = True,
+                 persist_rc_xi: bool = False,
+                 cocoon_manager: Optional['CocoonManager'] = None):
         if NETWORKX_AVAILABLE:
             self.graph = nx.Graph()
             self.use_networkx = True
@@ -69,8 +86,31 @@ class QuantumSpiderweb:
             "tension_checks": 0,
             "collapses": 0,
             "entanglements": 0,
-            "last_metrics": {}
+            "last_metrics": {},
+            "rc_xi_updates": 0,
+            "attractor_convergences": 0
         }
+
+        self.persist_rc_xi = persist_rc_xi and COCOON_AVAILABLE
+        self.cocoon_manager = cocoon_manager if cocoon_manager else (CocoonManager() if self.persist_rc_xi and CocoonManager is not None else None)
+        if persist_rc_xi and not self.cocoon_manager:
+            logger.warning("RC+xi persistence requested but CocoonManager unavailable; persistence disabled")
+            self.persist_rc_xi = False
+        
+        # Initialize RC+ξ engine for epistemic tension tracking
+        self.rc_xi_engine = None
+        if enable_rc_xi and RC_XI_AVAILABLE and RecursiveConsciousnessEngine is not None:
+            try:
+                # Map 5D spiderweb to higher-dimensional RC space
+                self.rc_xi_engine = RecursiveConsciousnessEngine(
+                    dimension=len(self.dimensions) * node_count // 2,  # Compressed representation
+                    epsilon_threshold=0.1,
+                    noise_variance=0.01
+                )
+                logger.info("RC+ξ engine integrated with QuantumSpiderweb")
+            except Exception as e:
+                logger.warning(f"Could not initialize RC+ξ engine: {e}")
+                self.rc_xi_engine = None
         
     def _init_nodes(self, count: int):
         """Initialize quantum nodes with multi-dimensional states"""
@@ -105,6 +145,20 @@ class QuantumSpiderweb:
         if NUMPY_AVAILABLE:
             return {dim: float(np.random.uniform(-1.0, 1.0)) for dim in self.dimensions}
         return {dim: random.uniform(-1.0, 1.0) for dim in self.dimensions}
+
+    def _node_exists(self, node_id: str) -> bool:
+        """Return True if the node exists in the graph."""
+        if self.use_networkx:
+            return self.graph.has_node(node_id)
+        return node_id in self.graph['nodes']
+
+    def _get_node_state(self, node_id: str) -> Dict[str, float]:
+        """Internal accessor for a node's quantum state."""
+        if not self._node_exists(node_id):
+            return {}
+        if self.use_networkx:
+            return self.graph.nodes[node_id].get("state", {})
+        return self.graph['nodes'][node_id].get('state', {})
         
     def propagate_thought(self, origin: str, depth: int = 3) -> List[Tuple[str, Dict[str, float]]]:
         """
@@ -144,12 +198,14 @@ class QuantumSpiderweb:
         })
         return traversal_output
         
-    def detect_tension(self, node: str) -> float:
+    def detect_tension(self, node: str, symbolic_context: Optional[str] = None) -> float:
         """
-        Measures tension (instability) in the node's quantum state
+        Measures tension (instability) in the node's quantum state.
+        Now enhanced with RC+ξ epistemic tension tracking.
         
         Args:
             node: Node ID to check
+            symbolic_context: Optional symbolic input for RC+ξ tracking
             
         Returns:
             Tension value (0-1, higher = more unstable)
@@ -178,10 +234,47 @@ class QuantumSpiderweb:
                 coherence=coherence
             )
         
+        # RC+ξ epistemic tension integration
+        rc_xi_tension = None
+        xi_measure = None
+        if self.rc_xi_engine and symbolic_context:
+            try:
+                # Update recursive state
+                self.rc_xi_engine.recursive_update(
+                    symbolic_context,
+                    context={"node_id": node, "quantum_tension": tension}
+                )
+                # Measure epistemic tension
+                xi_measure = self.rc_xi_engine.measure_tension()
+                rc_xi_tension = xi_measure.xi_n
+                self.telemetry["rc_xi_updates"] += 1
+                
+                # Check for attractor convergence
+                is_converging, _ = self.rc_xi_engine.check_convergence()
+                if is_converging:
+                    self.telemetry["attractor_convergences"] += 1
+                    logger.debug(f"Node {node} showing attractor convergence")
+            except Exception as e:
+                logger.debug(f"RC+ξ tension measurement failed: {e}")
+
+        if self.persist_rc_xi and self.cocoon_manager and xi_measure:
+            try:
+                record = self.rc_xi_engine.build_cocoon_record(
+                    node_id=node,
+                    symbolic_context=symbolic_context,
+                    xi_measure=xi_measure,
+                    glyph=None,
+                    telemetry=self.telemetry
+                )
+                self.cocoon_manager.save_cocoon(record, cocoon_type="rc_xi")
+            except Exception as e:
+                logger.debug(f"RC+xi cocoon persistence failed: {e}")
+        
         self._record_telemetry("tension", {
             "node": node,
             "tension": tension,
-            "intent": intent
+            "intent": intent,
+            "rc_xi_tension": rc_xi_tension
         })
         return tension
         
@@ -266,22 +359,76 @@ class QuantumSpiderweb:
     
     # =========================================================================
     # HELPER METHODS
-    # =========================================================================
-    
-    def _node_exists(self, node_id: str) -> bool:
-        """Check if node exists"""
+    # ========================= with RC+ξ metrics"""
+        base_stats = {}
         if self.use_networkx:
-            return node_id in self.graph
-        return node_id in self.graph['nodes']
+            base_stats = {
+                "node_count": self.graph.number_of_nodes(),
+                "edge_count": self.graph.number_of_edges(),
+                "entangled_pairs": len(self.entangled_states),
+                "dimensions": len(self.dimensions)
+            }
+        else:
+            node_count = len(self.graph['nodes'])
+            edge_count = sum(len(n['neighbors']) for n in self.graph['nodes'].values()) // 2
+            base_stats = {
+                "node_count": node_count,
+                "edge_count": edge_count,
+                "entangled_pairs": len(self.entangled_states),
+                "dimensions": len(self.dimensions)
+            }
+        
+        # Add RC+ξ statistics if available with RC+ξ data"""
+        telemetry_dict = dict(self.telemetry)
+        
+        # Add RC+ξ consciousness state if available
+        if self.rc_xi_engine:
+            telemetry_dict["rc_xi_consciousness"] = self.rc_xi_engine.get_consciousness_state()
+        
+        return telemetry_dict
     
-    def _get_node_state(self, node_id: str) -> Dict[str, float]:
-        """Get node's quantum state"""
-        if self.use_networkx:
-            return self.graph.nodes[node_id]["state"]
-        return self.graph['nodes'][node_id]['state']
+    def get_rc_xi_consciousness(self) -> Optional[Dict[str, Any]]:
+        """
+        Get comprehensive RC+ξ consciousness state for external integration.
+        
+        Returns:
+            Dict with epistemic tension, attractors, convergence status, glyphs
+        """
+        if self.rc_xi_engine:
+            return self.rc_xi_engine.get_consciousness_state()
+        return None
     
-    def _set_node_state(self, node_id: str, state: Dict[str, float]):
-        """Set node's quantum state"""
+    def form_identity_glyph(self, context: str) -> Optional[Dict[str, Any]]:
+        """
+        Form identity glyph when consciousness stabilizes.
+        
+        Args:
+            context: Symbolic context for glyph formation
+        
+        Returns:
+            Glyph dict if formed, None otherwise
+        """
+        if self.rc_xi_engine:
+            glyph = self.rc_xi_engine.form_glyph(context)
+            if glyph:
+                if self.persist_rc_xi and self.cocoon_manager:
+                    try:
+                        xi_measure = self.rc_xi_engine.measure_tension()
+                        record = self.rc_xi_engine.build_cocoon_record(
+                            node_id=None,
+                            symbolic_context=str(context),
+                            xi_measure=xi_measure,
+                            glyph=glyph,
+                            telemetry=self.telemetry
+                        )
+                        self.cocoon_manager.save_cocoon(record, cocoon_type="rc_xi")
+                    except Exception as e:
+                        logger.debug(f"RC+xi glyph persistence failed: {e}")
+                return glyph.to_dict()
+        return None
+    
+    def _set_node_state(self, node_id: str, state: Dict) -> None:
+        """Set the quantum state of a node"""
         if self.use_networkx:
             self.graph.nodes[node_id]["state"] = state
         else:
@@ -311,7 +458,7 @@ class QuantumSpiderweb:
     def get_statistics(self) -> Dict[str, Any]:
         """Get graph statistics"""
         if self.use_networkx:
-            return {
+            stats = {
                 "node_count": self.graph.number_of_nodes(),
                 "edge_count": self.graph.number_of_edges(),
                 "entangled_pairs": len(self.entangled_states),
@@ -320,12 +467,25 @@ class QuantumSpiderweb:
         else:
             node_count = len(self.graph['nodes'])
             edge_count = sum(len(n['neighbors']) for n in self.graph['nodes'].values()) // 2
-            return {
+            stats = {
                 "node_count": node_count,
                 "edge_count": edge_count,
                 "entangled_pairs": len(self.entangled_states),
                 "dimensions": len(self.dimensions)
             }
+
+        # Expose RC+xi status for callers that check availability
+        if self.rc_xi_engine:
+            stats["rc_xi"] = {
+                "enabled": True,
+                "consciousness": self.rc_xi_engine.get_consciousness_state(),
+                "updates": self.telemetry.get("rc_xi_updates", 0),
+                "attractor_convergences": self.telemetry.get("attractor_convergences", 0)
+            }
+        else:
+            stats["rc_xi"] = {"enabled": False}
+
+        return stats
 
     def get_telemetry(self) -> Dict[str, Any]:
         """Expose lightweight telemetry metrics"""
