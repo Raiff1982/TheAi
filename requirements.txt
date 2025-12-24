@@ -1,3 +1,40 @@
+# HuggingFace Spaces Training Requirements
+# Compatible versions to fix pyarrow error
+
+# Core dependencies
+gradio
+spaces
+
+# PyTorch (CPU version, GPU allocated by Spaces)
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==2.1.0
+
+# Transformers and training
+transformers==4.36.2
+datasets==2.16.1
+accelerate==0.25.0
+
+# Fix pyarrow compatibility issue
+pyarrow==14.0.1
+
+# Optional but recommended
+peft==0.7.1
+sentencepiece==0.1.99
+protobuf
+
+# Utilities
+numpy<2.0.0
+packaging
+
+gradio
+spaces
+torch
+transformers
+datasets
+peft
+accelerate
+safetensors
 # Codette Consciousness System Requirements
 # Version: 3.0
 # Python: 3.10+
@@ -24,7 +61,7 @@ qiskit>=0.39.0
 qiskit-aer>=0.11.0
 
 # Encryption & Security
-cryptography>=38.0.0
+cryptography
 
 # Web Framework (for API)
 fastapi>=0.95.0
@@ -46,7 +83,7 @@ sentry-sdk>=1.11.0
 
 # Data Serialization
 msgpack>=1.0.0
-protobuf>=4.0.0
+protobuf
 
 # Testing
 pytest>=8.2.0
