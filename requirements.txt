@@ -6,21 +6,21 @@ gradio
 spaces
 
 # PyTorch (CPU version, GPU allocated by Spaces)
-torch==2.1.0
-torchvision==0.16.0
-torchaudio==2.1.0
+torch
+torchvision
+torchaudio
 
 # Transformers and training
-transformers==4.36.2
-datasets==2.16.1
-accelerate==0.25.0
+transformers
+datasets
+accelerate
 
 # Fix pyarrow compatibility issue
-pyarrow==14.0.1
+pyarrow
 
 # Optional but recommended
-peft==0.7.1
-sentencepiece==0.1.99
+peft
+sentencepiece
 protobuf
 
 # Utilities
@@ -35,39 +35,40 @@ datasets
 peft
 accelerate
 safetensors
+torch
 # Codette Consciousness System Requirements
 # Version: 3.0
-# Python: 3.10+
+# Python: 3.10+slim
 # Gradio
 
 # Core Scientific Computing
-numpy>=1.23.0
-scipy>=1.9.0
-pandas>=1.5.0
+numpy
+scipy
+pandas
 Gradio
 spaces
 torch
 
 # Natural Language Processing
-nltk>=3.9.0
-vaderSentiment>=3.3.2
-textblob>=0.17.1
+nltk
+vaderSentiment
+textblob
 
 # Graph & Network Analysis
-networkx>=3.0
+networkx
 
 # Quantum Simulation (Optional but recommended)
-qiskit>=0.39.0
-qiskit-aer>=0.11.0
+qiskit
+qiskit-aer
 
 # Encryption & Security
 cryptography
 
 # Web Framework (for API)
-fastapi>=0.95.0
-uvicorn>=0.21.0
-pydantic>=2.5.0
-pydantic-core>=2.23.4
+fastapi
+uvicorn
+pydantic
+pydantic-core
 
 # Database
 SQLAlchemy>=2.0.0
