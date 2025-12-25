@@ -76,7 +76,8 @@ services:
     # Volume mounts for persistent data
     volumes:
       # Quantum state persistence
-      - codette-cocoons:/app/cocoons
+      # NOTE: Cocoons volume disabled to use built-in self-awareness JSON files
+      # - codette-cocoons:/app/cocoons
       - codette-data:/app/data
       - codette-logs:/app/logs
       - codette-models:/app/models

@@ -46,4 +46,6 @@ Thumbs.db
 
 # Keep these
 !rc_xi_large_dataset.jsonl
-!rc_xi_trained_*/
+!cocoons/
+!cocoons/*.json
+!cocoons/*.cocoon

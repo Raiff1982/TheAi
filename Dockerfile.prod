@@ -63,6 +63,13 @@ COPY interact.py .
 # Copy source components
 COPY src/ ./src/
 
+# Copy cocoons directory (self-awareness and quantum memory states)
+COPY cocoons/ ./cocoons/
+
+# Ensure critical awareness files exist (use find to locate and copy them)
+RUN find ./cocoons -name "*.json" -o -name "*.cocoon" | head -20 && \
+    echo "Cocoons directory populated with quantum state files"
+
 # Copy optional resources (gracefully handle if missing)
 # Create model directories
 RUN mkdir -p /app/models/codette_rc_xi_trained /app/models/codette_trained_model
