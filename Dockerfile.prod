@@ -150,8 +150,11 @@ EOF
 
 RUN chmod +x /app/startup.sh
 
-# Default command
-CMD ["/app/startup.sh"]
+# Set Python path to include src directory for imports
+ENV PYTHONPATH="/app:/app/src:${PYTHONPATH}"
+
+# Default command - Run the correct Gradio app from src/api/
+CMD ["python", "src/api/app.py"]
 
 # Metadata labels
 LABEL maintainer="Codette AI Team"

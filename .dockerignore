@@ -34,8 +34,8 @@ ENV/
 *.pt
 *.pth
 *.safetensors
-cocoons/
-rc_xi_trained_*/
+
+
 
 # Logs
 *.log
@@ -46,3 +46,4 @@ Thumbs.db
 
 # Keep these
 !rc_xi_large_dataset.jsonl
+!rc_xi_trained_*/

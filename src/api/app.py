@@ -17,17 +17,26 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
 
 try:
     from components.ai_core import AICore
-    from components.aegis_integration import AegisBridge
-    from components.aegis_integration.config import AEGIS_CONFIG
     from components.search_engine import SearchEngine
     from components.response_templates import get_response_templates
 except ImportError:
     # Fallback for container environment
     from src.components.ai_core import AICore
-    from src.components.aegis_integration import AegisBridge
-    from src.components.aegis_integration.config import AEGIS_CONFIG
     from src.components.search_engine import SearchEngine
     from src.components.response_templates import get_response_templates
+
+# AEGIS is optional - import but don't fail if unavailable
+AegisBridge = None
+AEGIS_CONFIG = None
+try:
+    from aegis_integration.aegis_bridge import AegisBridge
+    from aegis_integration.config import AEGIS_CONFIG
+except ImportError:
+    try:
+        from src.aegis_integration.aegis_bridge import AegisBridge
+        from src.aegis_integration.config import AEGIS_CONFIG
+    except ImportError:
+        logger.warning("AEGIS integration not available - continuing without it")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -180,7 +189,9 @@ for potential_model in model_paths:
 if not model_loaded:
     logger.error("❌ Failed to load any model!")
     raise RuntimeError("No suitable model could be loaded")
-    
+
+# Initialize model and core systems
+try:
     # Use GPU if available
     try:
         if torch.cuda.is_available():

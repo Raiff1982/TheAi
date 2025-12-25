@@ -1,7 +1,11 @@
 from typing import Dict, Any, List, Optional
-from ..knowledge_base.grounding_truth import GroundingTruth
-from ..components.response_templates import get_response_templates
 import logging
+try:
+    from knowledge_base.grounding_truth import GroundingTruth
+    from components.response_templates import get_response_templates
+except ImportError:
+    from src.knowledge_base.grounding_truth import GroundingTruth
+    from src.components.response_templates import get_response_templates
 
 logger = logging.getLogger(__name__)
 

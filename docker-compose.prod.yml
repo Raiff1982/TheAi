@@ -14,7 +14,7 @@ services:
     # Port mappings
     ports:
       - "7860:7860"  # Gradio web interface
-      - "8000:8000"  # Alternative API port (if needed)
+      - "8001:8000"  # Alternative API port (mapped to 8001 to avoid conflict)
     
     # Environment variables - Quantum consciousness configuration
     environment:

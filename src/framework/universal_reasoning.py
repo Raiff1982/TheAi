@@ -14,16 +14,22 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 # Framework modules
 try:
-    from ..components.quantum_spiderweb import QuantumSpiderweb
-    from .cognition_cocooner import CognitionCocooner
-    from .dream_reweaver import DreamReweaver
-    from .ethical_governance import EthicalAIGovernance
-except ImportError:
-    # Fallback imports
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
     from components.quantum_spiderweb import QuantumSpiderweb
     from framework.cognition_cocooner import CognitionCocooner
+    from framework.dream_reweaver import DreamReweaver
+    from framework.ethical_governance import EthicalAIGovernance
+except ImportError:
+    try:
+        from src.components.quantum_spiderweb import QuantumSpiderweb
+        from src.framework.cognition_cocooner import CognitionCocooner
+        from src.framework.dream_reweaver import DreamReweaver
+        from src.framework.ethical_governance import EthicalAIGovernance
+    except ImportError:
+        # Fallback imports
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from components.quantum_spiderweb import QuantumSpiderweb
+        from framework.cognition_cocooner import CognitionCocooner
     from framework.dream_reweaver import DreamReweaver
     from framework.ethical_governance import EthicalAIGovernance
 

@@ -5,9 +5,12 @@ This module provides user personalization capabilities.
 import json
 from typing import Dict, Any
 try:
-    from ..utils.database import Database
+    from utils.database import Database
 except Exception:
-    Database = None
+    try:
+        from src.utils.database import Database
+    except Exception:
+        Database = None
 
 class UserPersonalizer:
     """Personalizes responses based on user preferences"""

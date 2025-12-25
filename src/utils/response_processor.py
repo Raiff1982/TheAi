@@ -1,7 +1,11 @@
 from typing import Dict, Any, List, Optional
 import time
-from ..knowledge_base.grounding_truth import GroundingTruth
-from ..components.response_templates import get_response_templates
+try:
+    from knowledge_base.grounding_truth import GroundingTruth
+    from components.response_templates import get_response_templates
+except ImportError:
+    from src.knowledge_base.grounding_truth import GroundingTruth
+    from src.components.response_templates import get_response_templates
 
 # Try to import generic responder for multi-perspective optimization
 GENERIC_RESPONDER_AVAILABLE = False
@@ -23,10 +27,14 @@ except ImportError:
 
 # Import natural response enhancer
 try:
-    from ..components.natural_response_enhancer import get_natural_enhancer
+    from components.natural_response_enhancer import get_natural_enhancer
     NATURAL_ENHANCER_AVAILABLE = True
 except ImportError:
-    NATURAL_ENHANCER_AVAILABLE = False
+    try:
+        from src.components.natural_response_enhancer import get_natural_enhancer
+        NATURAL_ENHANCER_AVAILABLE = True
+    except ImportError:
+        NATURAL_ENHANCER_AVAILABLE = False
 
 
 class ResponseProcessor:

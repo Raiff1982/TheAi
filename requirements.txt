@@ -48,6 +48,7 @@ pandas
 Gradio
 spaces
 torch
+plotly
 
 # Natural Language Processing
 nltk

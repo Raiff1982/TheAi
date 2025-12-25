@@ -3,7 +3,10 @@ This module manages feedback collection and application for improving AI respons
 """
 
 from typing import Dict, Any
-from ..utils.database import Database
+try:
+    from utils.database import Database
+except ImportError:
+    from src.utils.database import Database
 
 class ImprovedFeedbackManager:
     def __init__(self, database: Database):

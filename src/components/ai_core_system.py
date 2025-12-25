@@ -15,9 +15,12 @@ from .dynamic_learning import DynamicLearner
 from .health_monitor import HealthMonitor
 
 try:
-    from ..utils.logger import logger
+    from utils.logger import logger
 except Exception:
-    logger = logging.getLogger(__name__)
+    try:
+        from src.utils.logger import logger
+    except Exception:
+        logger = logging.getLogger(__name__)
 
 
 class AICore:

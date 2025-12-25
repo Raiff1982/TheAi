@@ -1,7 +1,10 @@
 from typing import List, Dict, Any
 import json
 import os
-from ..components.search_engine import SearchEngine
+try:
+    from components.search_engine import SearchEngine
+except ImportError:
+    from src.components.search_engine import SearchEngine
 
 class SearchUtility:
     """Utility class for performing web searches"""
