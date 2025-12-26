@@ -25,6 +25,10 @@ except ImportError:
     from src.components.search_engine import SearchEngine
     from src.components.response_templates import get_response_templates
 
+# Configure logging FIRST (needed for import error handlers)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # AEGIS is optional - import but don't fail if unavailable
 AegisBridge = None
 AEGIS_CONFIG = None
@@ -37,10 +41,6 @@ except ImportError:
         from src.aegis_integration.config import AEGIS_CONFIG
     except ImportError:
         logger.warning("AEGIS integration not available - continuing without it")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # ============================================================================
 # CUSTOMIZATION: System Prompt Configuration

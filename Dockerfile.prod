@@ -19,7 +19,10 @@ ENV PYTHONUNBUFFERED=1 \
     ETHICAL_GOVERNANCE=active \
     MODEL_NAME="/app/models/codette_rc_xi_trained" \
     MODEL_PATH="/app/models/codette_rc_xi_trained" \
-    DEVICE=cpu
+    DEVICE=cpu \
+    TRANSFORMERS_VERBOSITY=error \
+    CODETTE_FORCE_CPU=1 \
+    CODETTE_ENABLE_OTEL=0
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,12 +37,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Select dependency set (defaults to minimal CPU-safe set)
+ARG REQUIREMENTS_FILE=requirements-minimal.txt
+
 # Copy requirements first for Docker layer caching
-COPY requirements.txt .
+COPY requirements.txt requirements-minimal.txt ./
 
 # Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r ${REQUIREMENTS_FILE}
 
 # Create necessary directories
 RUN mkdir -p /app/cocoons \
@@ -158,7 +164,8 @@ EOF
 RUN chmod +x /app/startup.sh
 
 # Set Python path to include src directory for imports
-ENV PYTHONPATH="/app:/app/src:${PYTHONPATH}"
+# (separate ENV to avoid self-referential variable issue)
+ENV PYTHONPATH="/app:/app/src"
 
 # Default command - Run the correct Gradio app from src/api/
 CMD ["python", "src/api/app.py"]

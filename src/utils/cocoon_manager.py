@@ -5,8 +5,20 @@ import logging
 from typing import List, Dict, Any, Optional
 import gzip
 import shutil
+import numpy as np
 
 logger = logging.getLogger(__name__)
+
+class NumpyEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles numpy types"""
+    def default(self, obj):
+        if isinstance(obj, (np.bool_, np.integer)):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
 
 class CocoonManager:
     """Manages Codette's cocoon data storage and retrieval"""
@@ -131,7 +143,7 @@ class CocoonManager:
             }
             
             with open(filepath, 'w') as f:
-                json.dump(cocoon, f, indent=2)
+                json.dump(cocoon, f, indent=2, cls=NumpyEncoder)
                 
             # Update metadata index lazily
             metadata_entry = {
@@ -199,13 +211,22 @@ class CocoonManager:
                 path = meta.get("path")
                 if not path or not os.path.exists(path):
                     continue
+                
+                # Skip if already archived (already ends with .gz)
+                if str(path).endswith(".gz"):
+                    meta["archived"] = True
+                    continue
+                
                 archived_path = os.path.join(
                     self.archive_dir,
                     os.path.basename(path) + ".gz"
                 )
-                # Skip if already compressed
-                if archived_path.endswith(".gz") and os.path.exists(archived_path):
+                
+                # Skip if archive file already exists (shouldn't happen, but be safe)
+                if os.path.exists(archived_path):
+                    logger.debug(f"Archive already exists: {archived_path}")
                     continue
+                
                 try:
                     with open(path, 'rb') as src, gzip.open(archived_path, 'wb', compresslevel=self.compress_level) as dst:
                         shutil.copyfileobj(src, dst)
@@ -213,6 +234,7 @@ class CocoonManager:
                     os.remove(path)
                     meta["path"] = archived_path
                     meta["archived"] = True
+                    logger.debug(f"Archived cocoon: {os.path.basename(path)}")
                 except Exception as e:
                     logger.error(f"Failed to archive cocoon {path}: {e}")
 

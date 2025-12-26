@@ -29,6 +29,7 @@ services:
       - MODEL_NAME=/app/models/codette_rc_xi_trained
       - MODEL_PATH=/app/models/codette_rc_xi_trained
       - DEVICE=cpu
+      - TRANSFORMERS_VERBOSITY=error
       
       # Quantum Parameters
       - SPIDERWEB_DIMENSION=5

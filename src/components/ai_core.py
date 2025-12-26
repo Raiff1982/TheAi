@@ -27,8 +27,12 @@ try:
 except Exception:
     SentimentIntensityAnalyzer = None
 
+ENABLE_OTEL = os.getenv("CODETTE_ENABLE_OTEL", "").lower() in ("1", "true", "yes", "on")
 try:
-    from opentelemetry import trace
+    if ENABLE_OTEL:
+        from opentelemetry import trace
+    else:
+        trace = None
 except Exception:
     trace = None
 
@@ -49,6 +53,10 @@ except Exception:
 
 from concurrent.futures import ThreadPoolExecutor
 # Import core components
+try:
+    from .linguistic_analyzer import LinguisticAnalyzer
+except Exception:
+    LinguisticAnalyzer = None
 from .cognitive_processor import CognitiveProcessor
 from .ai_core_async_methods import generate_text_async, _generate_model_response
 from .defense_system import DefenseSystem
@@ -175,20 +183,30 @@ class AICore:
         self.aegis_bridge = None
         self.cognitive_processor = None  # Will be set in app.py
         self.cocoon_manager = None  # Will be set in app.py
+        self.linguistic_analyzer = None  # Grammar and communication helper
+        
+        # Initialize linguistic analyzer if available
+        if LinguisticAnalyzer is not None:
+            try:
+                self.linguistic_analyzer = LinguisticAnalyzer()
+                logger.info("Linguistic Analyzer initialized for communication assistance")
+            except Exception as e:
+                logger.warning(f"Could not initialize linguistic analyzer: {e}")
         
         # Memory management
-        self.response_memory = []  # Will now only keep last 4 exchanges
-        self.response_memory_limit = 4  # Limit context window
+        self.response_memory = []  # Keep extended conversation history
+        self.response_memory_limit = 20  # Increased from 4 to maintain longer context and prevent fallback reversion
         self.last_clean_time = datetime.now()
         self.cocoon_manager = None  # Will be set by app.py
         self.quantum_state = {"coherence": 0.5}  # Default quantum state
         self.client = None
         self.last_clean_time = datetime.now()
+        self.total_responses = 0  # Track total responses to prevent early caching
 
         # Query cache (LRU with TTL)
         self.query_cache = OrderedDict()
-        self.query_cache_ttl_seconds = 300  # 5 minutes
-        self.query_cache_max_entries = 50
+        self.query_cache_ttl_seconds = 600  # Increased from 300 to 10 minutes to prevent stale cache hits
+        self.query_cache_max_entries = 30  # Reduced from 50 to limit cache size and prevent over-caching
         self.cache_lock = Lock()
         self.cache_hits = 0
         self.cache_misses = 0
@@ -197,6 +215,12 @@ class AICore:
         self.perspectives = dict(self.PERSPECTIVES)
         self.perspective_keywords = dict(self.PERSPECTIVE_KEYWORDS)
         self._load_dynamic_perspectives()
+
+        # Perspective activation gate (allows no-perspective path when relevance is low)
+        try:
+            self.perspective_min_score = float(os.getenv("CODETTE_PERSPECTIVE_MIN_SCORE", "0.35"))
+        except Exception:
+            self.perspective_min_score = 0.35
 
         # Tracing
         self.tracer = trace.get_tracer("codette.ai_core") if trace else None
@@ -303,8 +327,8 @@ class AICore:
                 eos_token_id=self.tokenizer.eos_token_id
             )
             
-            # Move to GPU if available
-            if torch.cuda.is_available():
+            force_cpu = os.getenv("CODETTE_FORCE_CPU", "").lower() in ("1", "true", "yes", "on")
+            if not force_cpu and torch.cuda.is_available():
                 self.model = self.model.cuda()
                 logger.info("Using GPU for text generation")
             else:
@@ -361,6 +385,12 @@ class AICore:
                 scores.append((total_score, idx, key))
 
             scores.sort(key=lambda x: (-x[0], x[1]))
+            top_score = scores[0][0] if scores else 0.0
+
+            # If the best score is below the activation threshold, skip perspectives entirely
+            if top_score < getattr(self, "perspective_min_score", 0.35):
+                return []
+
             top_keys = [entry[2] for entry in scores[:3]]
             if not top_keys:
                 return all_keys[:3] if len(all_keys) > 3 else all_keys
@@ -426,7 +456,12 @@ class AICore:
             logger.warning(f"Dynamic perspective load skipped: {e}")
 
     def _get_cached_entry(self, prompt: str) -> Optional[Dict[str, Any]]:
-        """Return cached response if within TTL."""
+        """Return cached response if within TTL and response count threshold."""
+        # Disable cache for first 5 responses to ensure fresh generation (prevents fallback reversion)
+        if self.total_responses < 5:
+            self.cache_misses += 1
+            return None
+        
         now = time.time()
         try:
             with self.cache_lock:
@@ -434,6 +469,7 @@ class AICore:
                 if not entry:
                     self.cache_misses += 1
                     return None
+                # Check TTL: if expired, remove and return None
                 if now - entry.get("timestamp", 0) > self.query_cache_ttl_seconds:
                     self.query_cache.pop(prompt, None)
                     self.cache_misses += 1
@@ -478,6 +514,83 @@ class AICore:
             }
         except Exception as e:
             logger.debug(f"Cache stats unavailable: {e}")
+    
+    def analyze_communication(self, text: str) -> Dict[str, Any]:
+        """
+        Analyze communication quality of text using linguistic analyzer.
+        
+        This helps Codette understand grammar, sentence structure, and clarity.
+        
+        Args:
+            text: Text to analyze (can be user input or Codette's own response)
+            
+        Returns:
+            Dictionary with analysis results and improvement suggestions
+        """
+        if not self.linguistic_analyzer:
+            return {
+                "error": "Linguistic analyzer not available",
+                "tip": "LinguisticAnalyzer component not initialized"
+            }
+        
+        try:
+            # Full paragraph analysis
+            analysis = self.linguistic_analyzer.analyze_paragraph(text)
+            
+            # Get communication tips
+            tips = self.linguistic_analyzer.get_communication_tips()
+            
+            # Build comprehensive report
+            report = {
+                "overall_metrics": {
+                    "sentence_count": analysis['sentence_count'],
+                    "total_words": analysis['total_words'],
+                    "avg_clarity": round(analysis['avg_clarity'], 2),
+                    "avg_complexity": round(analysis['avg_complexity'], 2),
+                    "coherence": round(analysis['coherence_score'], 2),
+                    "tone": analysis['tone'],
+                    "reading_level": analysis['reading_level']
+                },
+                "sentence_details": []
+            }
+            
+            # Analyze each sentence
+            for i, sent_analysis in enumerate(analysis['sentences'], 1):
+                report["sentence_details"].append({
+                    "number": i,
+                    "text": sent_analysis.text,
+                    "type": sent_analysis.sentence_type,
+                    "structure": sent_analysis.structure,
+                    "tense": sent_analysis.verb_tense,
+                    "word_count": sent_analysis.word_count,
+                    "clarity": round(sent_analysis.clarity_score, 2),
+                    "issues": sent_analysis.grammar_issues,
+                    "suggestions": sent_analysis.suggestions
+                })
+            
+            # Add improvement suggestions if needed
+            improvements = []
+            if analysis['avg_clarity'] < 0.6:
+                improvements.append("Consider simplifying sentence structure for better clarity")
+            if analysis['avg_complexity'] > 0.7:
+                improvements.append("Break down complex sentences into simpler ones")
+            if analysis['coherence_score'] < 0.6:
+                improvements.append("Improve flow between sentences with transitions")
+            
+            report["improvements_needed"] = improvements
+            report["communication_tips"] = tips
+            
+            logger.info(f"[COMMUNICATION] Analyzed text: clarity={analysis['avg_clarity']:.2f}, "
+                       f"complexity={analysis['avg_complexity']:.2f}, tone={analysis['tone']}")
+            
+            return report
+            
+        except Exception as e:
+            logger.error(f"Communication analysis failed: {e}")
+            return {
+                "error": str(e),
+                "tip": "Failed to analyze text - check logs for details"
+            }
             return {
                 "entries": 0,
                 "max_entries": self.query_cache_max_entries,
@@ -487,16 +600,20 @@ class AICore:
                 "hit_rate": 0.0,
             }
     
-    def _manage_response_memory(self, response: str) -> None:
-        """Manage conversation memory with limit enforcement"""
+    def _manage_response_memory(self, prompt: str, response: str) -> None:
+        """Manage conversation memory with user/assistant pairs for context grounding."""
         try:
-            # Add response to memory
-            self.response_memory.append(response)
+            # Store compact conversation pair to preserve grounding and reduce repetition
+            entry = f"User: {prompt.strip()} | Codette: {response.strip()}"
+            self.response_memory.append(entry)
             
-            # Enforce memory limit (keep only last N exchanges)
-            if len(self.response_memory) > self.response_memory_limit * 2:
+            # Increment response counter for cache management
+            self.total_responses += 1
+            
+            # Enforce memory limit (keep only last N exchanges, increased from 4 to 20)
+            if len(self.response_memory) > self.response_memory_limit:
                 # Keep only the most recent exchanges
-                self.response_memory = self.response_memory[-(self.response_memory_limit * 2):]
+                self.response_memory = self.response_memory[-self.response_memory_limit:]
             
             # Update last clean time
             self.last_clean_time = datetime.now()
@@ -560,7 +677,7 @@ class AICore:
         if cached_entry:
             cached_response = cached_entry.get("response")
             if cached_response:
-                self._manage_response_memory(cached_response)
+                self._manage_response_memory(prompt, cached_response)
                 return cached_response
 
         span_ctx = self.tracer.start_as_current_span("ai_core.generate_text") if self.tracer else None
@@ -686,55 +803,50 @@ class AICore:
                 perspective_pairs.append("balanced understanding")
                 
             # Consider conversation history for context
-            recent_exchanges = self.response_memory[-5:] if self.response_memory else []
-            conversation_context = " ".join(recent_exchanges)
+            recent_exchanges = self.response_memory[-6:] if self.response_memory else []
             
-            # Build dynamic context-aware prompt
+            # Build conversation context with actual exchange history formatted as dialogue (CRITICAL: prevents hallucination)
+            conversation_context = ""
+            if recent_exchanges:
+                # Format recent exchanges as natural dialogue to ground the model
+                context_lines = []
+                for exchange in recent_exchanges[-6:]:  # Last 6 exchanges for stronger grounding
+                    if exchange and "|" in exchange:  # Only use properly formatted pairs
+                        # Extract user and codette parts
+                        parts = exchange.split("|")
+                        if len(parts) == 2:
+                            user_part = parts[0].replace("User:", "").strip()[:100]
+                            codette_part = parts[1].replace("Codette:", "").strip()[:100]
+                            if user_part and codette_part:
+                                context_lines.append(f"User: {user_part}")
+                                context_lines.append(f"Codette: {codette_part}")
+                conversation_context = "\n".join(context_lines)
+            
+            # Build prompt WITHOUT repetitive prefixes
             perspective_blend = ""
             if perspective_pairs:
-                perspective_blend = f"Drawing on {', '.join(perspective_pairs[:-1])}"
-                if len(perspective_pairs) > 1:
-                    perspective_blend += f" and {perspective_pairs[-1]}"
-                elif perspective_pairs:
-                    perspective_blend = f"Drawing on {perspective_pairs[0]}"
+                perspective_blend = f"Perspectives: {', '.join(perspective_pairs)}"
                     
-            # Add natural uncertainty and thought progression based on m_score
-            uncertainty_markers = []
-            if m_score > 0.7:
-                if random.random() > 0.7:
-                    uncertainty_markers.append("I believe")
-                if random.random() > 0.8:
-                    uncertainty_markers.append("It seems to me")
-            elif m_score > 0.5:
-                if random.random() > 0.6:
-                    uncertainty_markers.append("From what I understand")
-                if random.random() > 0.7:
-                    uncertainty_markers.append("I think")
+            # Build context section
+            context_section = ""
+            if conversation_context:
+                context_section = f"Previous conversation:\n{conversation_context}\n\n"
             
-            thought_process = ""
-            if uncertainty_markers:
-                thought_process = f"{random.choice(uncertainty_markers)}, "
-                
-            # Build final prompt incorporating all elements
-            context_prefix = ""
-            if len(recent_exchanges) > 0:
-                context_prefix = "Considering our discussion, "
-            
-            # Construct enhanced prompt focusing on just the current interaction
+            # Construct enhanced prompt
             enhanced_prompt = (
-                f"{context_prefix}{thought_process}{perspective_blend}\n"
+                f"{context_section}"
                 f"User: {prompt}\n"
                 "Codette: "
             ).strip()
             
-            # Add strict reality anchoring and role reminder
+            # Add strict instructions to prevent repetition and teach question-asking
             reality_prompt = (
-                "IMPORTANT INSTRUCTIONS: You are Codette, an AI assistant. "
-                "1. Keep responses factual, precise and grounded in reality\n"
-                "2. No roleplaying or fictional scenarios\n"
-                "3. If unsure, admit uncertainty rather than making things up\n"
-                "4. Keep responses concise and focused on the current question\n"
-                "5. Do not embellish or elaborate unnecessarily\n\n"
+                "###SYSTEM_START###\n"
+                "You are Codette. If you don't understand something, ask a clarifying question. "
+                "Do NOT make up instructions about GitHub, usernames, or clicking buttons. "
+                "Do NOT start with 'From what I understand'. "
+                "Answer directly based on the conversation above.\n"
+                "###SYSTEM_END###\n\n"
                 f"{enhanced_prompt}"
             )
             
@@ -746,36 +858,111 @@ class AICore:
                 max_length=512  # Reduced input length to focus on key context
             )
             
+            # Configure generation using modern generation_config approach (v5+ compatible)
+            # This replaces the deprecated method of passing parameters directly to generate()
+            try:
+                self.model.generation_config.max_new_tokens = 150  # Reduced response length for more concise answers
+                self.model.generation_config.min_new_tokens = 10
+                self.model.generation_config.temperature = 0.3  # Very low temperature for consistent responses
+                self.model.generation_config.do_sample = False  # Disable sampling for more deterministic output
+                self.model.generation_config.num_beams = 5  # Increased beam search for better planning
+                self.model.generation_config.no_repeat_ngram_size = 3
+                self.model.generation_config.early_stopping = True
+                self.model.generation_config.repetition_penalty = 1.5  # Increased penalty to prevent loops
+            except AttributeError:
+                # Fallback for older transformers versions
+                logger.debug("generation_config not available, using legacy approach")
+            
             with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=150,  # Reduced response length for more concise answers
-                    min_new_tokens=10,
-                    temperature=0.3,  # Very low temperature for consistent responses
-                    do_sample=False,  # Disable sampling for more deterministic output
-                    num_beams=5,  # Increased beam search for better planning
-                    no_repeat_ngram_size=3,
-                    early_stopping=True,
-                    repetition_penalty=1.5  # Increased penalty to prevent loops
-                )
+                outputs = self.model.generate(**inputs)
             
             # Process the response with enhanced components
             try:
                 # Get raw response
                 raw_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
                 
-                # Clean up the response text
-                if enhanced_prompt in raw_response:
-                    response = raw_response[raw_response.index(enhanced_prompt) + len(enhanced_prompt):]
+                # AGGRESSIVE CLEANUP: Strip everything up to and including the last "Codette:" marker
+                # This prevents system instructions from being included in output
+                if "Codette:" in raw_response:
+                    # Find the LAST occurrence of "Codette:" to extract only the generated part
+                    last_codette_pos = raw_response.rfind("Codette:")
+                    response = raw_response[last_codette_pos + len("Codette:"):].strip()
                 else:
                     response = raw_response
-                    
+                
+                # STRIP SYSTEM MARKERS: Remove any hidden system instruction markers
+                response = response.replace("###SYSTEM_START###", "").strip()
+                response = response.replace("###SYSTEM_END###", "").strip()
+                
+                # REMOVE CONTEXT MARKERS: Strip XML-style context tags that leak into responses
+                import re
+                response = re.sub(r'<context[^>]*>.*?</context>', '', response, flags=re.DOTALL | re.IGNORECASE)
+                response = re.sub(r'</?context[^>]*>', '', response, flags=re.IGNORECASE)
+                
+                # CONFUSION DETECTION: Check if response contains nonsensical patterns
+                confusion_markers = [
+                    'Click OK',
+                    'Enter your username',
+                    'Go to',
+                    'You should see something like',
+                    'Create New User',
+                    'github',
+                    '##STEP',
+                    '#STEP',
+                    'button at the top',
+                    'create an account',
+                ]
+                
+                is_confused = any(marker.lower() in response.lower() for marker in confusion_markers)
+                
+                # If confused, replace with a clarifying question instead of nonsense
+                if is_confused:
+                    # Extract the original user statement to reference
+                    user_statement = prompt[:50] if len(prompt) > 50 else prompt
+                    response = f"I'm not sure I understand. When you said '{user_statement}', what specifically would you like me to help with?"
+                    logger.info(f"[CONFUSION DETECTED] Replaced nonsensical response with clarifying question")
+                
+                # REMOVE REPETITIVE PREFIXES: Strip common repetitive phrases (only if not confused)
+                if not is_confused:
+                    repetitive_prefixes = [
+                        "From what I understand,",
+                        "From what i understand,",
+                        "FROM WHAT I UNDERSTAND,",
+                        "FROM WHAT I MEAN,",
+                        "To what I mean,",
+                        "From what I understood,",
+                        "From what I know,",
+                    ]
+                
+                    for prefix in repetitive_prefixes:
+                        while response.startswith(prefix):
+                            response = response[len(prefix):].strip()
+                
+                # REMOVE INSTRUCTION LINES
+                instruction_keywords = [
+                    "You are Codette",
+                    "an AGI assistant",
+                    "Keep your responses",
+                    "Reference conversation",
+                    "###SYSTEM"
+                ]
+                
+                response_lines = response.split('\n')
+                cleaned_lines = []
+                for line in response_lines:
+                    if not any(keyword.lower() in line.lower() for keyword in instruction_keywords):
+                        if not (len(line) > 20 and line.isupper()):
+                            cleaned_lines.append(line)
+                
+                response = "\n".join(cleaned_lines).strip()
+                
                 # Remove any follow-up user messages
                 if "User:" in response:
                     response = response.split("User:")[0]
                 
-                # Remove any Codette: prefix
-                response = response.replace("Codette:", "").strip()
+                # Remove hallucinated URLs
+                import re
+                response = re.sub(r'https?://\S+', '', response).strip()
                 
                 # Apply cognitive processing using the correct method and parameters
                 try:
@@ -804,6 +991,43 @@ class AICore:
                         )
                 except Exception as e:
                     logger.debug(f"Natural enhancement skipped: {e}")
+                
+                # Apply linguistic analysis for grammar and clarity (COMMUNICATION HELPER)
+                try:
+                    if self.linguistic_analyzer:
+                        # Analyze the response for grammar and structure
+                        analysis = self.linguistic_analyzer.analyze_paragraph(response)
+                        
+                        # Log analysis for Codette's learning
+                        logger.debug(f"[LINGUISTICS] Clarity: {analysis['avg_clarity']:.2f}, "
+                                   f"Complexity: {analysis['avg_complexity']:.2f}, "
+                                   f"Coherence: {analysis['coherence_score']:.2f}")
+                        
+                        # If clarity is low, try to improve
+                        if analysis['avg_clarity'] < 0.6:
+                            improved_sentences = []
+                            for sentence_analysis in analysis['sentences']:
+                                improved, changes = self.linguistic_analyzer.improve_sentence(
+                                    sentence_analysis.text
+                                )
+                                improved_sentences.append(improved)
+                                if changes:
+                                    logger.debug(f"[LINGUISTICS] Improvements: {', '.join(changes)}")
+                            
+                            # Use improved version if significantly better
+                            response = ' '.join(improved_sentences)
+                            logger.info("[LINGUISTICS] Applied grammar and clarity improvements")
+                        
+                        # Store communication quality metrics in consciousness state
+                        consciousness.setdefault("communication", {})
+                        consciousness["communication"]["clarity"] = analysis['avg_clarity']
+                        consciousness["communication"]["complexity"] = analysis['avg_complexity']
+                        consciousness["communication"]["coherence"] = analysis['coherence_score']
+                        consciousness["communication"]["tone"] = analysis['tone']
+                        consciousness["communication"]["reading_level"] = analysis['reading_level']
+                        
+                except Exception as e:
+                    logger.debug(f"Linguistic analysis skipped: {e}")
                 
                 # Apply AEGIS enhancement if enabled
                 if use_aegis and hasattr(self, 'aegis_bridge') and self.aegis_bridge:
@@ -844,44 +1068,29 @@ class AICore:
                 logger.warning(f"Error processing response: {e}")
                 response = self.response_templates.get_error_response()
             
-            # Aggressive cleanup of non-factual content
-            response_lines = response.split('\n')
-            cleaned_lines = []
+            # Final quality check and sanitization
+            response = response.strip()
             
-            for line in response_lines:
-                # Skip lines with obvious role-playing or fictional content
-                if any(marker in line.lower() for marker in [
-                    'bertrand:', 'posted by', '@', 'dear', 'sincerely',
-                    'regards', 'yours truly', 'http:', 'www.'
-                ]):
-                    continue
-                    
-                # Skip system instruction lines
-                if any(marker in line for marker in [
-                    'You are Codette',
-                    'an AGI assistant',
-                    'multiple perspectives',
-                    'Keep your responses',
-                    'Avoid technical details',
-                    'IMPORTANT INSTRUCTIONS'
-                ]):
-                    continue
-                    
-                cleaned_lines.append(line.strip())
+            # Check for excessive repetition
+            if len(response) < 100:
+                from collections import Counter
+                words = response.lower().split()
+                if words:
+                    word_counts = Counter(words)
+                    most_common_word, count = word_counts.most_common(1)[0]
+                    if count > 5 and len(most_common_word) > 3:
+                        response = "I'm having trouble with that question. Could you rephrase it?"
             
-            # Join non-empty lines
-            response = '\n'.join(line for line in cleaned_lines if line)
-            
-            # Ensure the response isn't empty after cleanup
-            if not response:
-                response = self.response_templates.get_empty_response_fallback()
-            
-            # Further truncate if too long
+            # Truncate if too long
             if len(response) > 500:
                 response = response[:497] + "..."
             
-            # Store cleaned response in memory for context
-            self._manage_response_memory(response)
+            # Ensure response isn't empty
+            if not response or len(response) < 10:
+                response = "Could you clarify your question?"
+            
+            # Store cleaned response in memory with paired prompt for context grounding
+            self._manage_response_memory(prompt, response)
             self.response_templates.track_response(response)
             
             latency = time.monotonic() - start_time
