@@ -2,7 +2,7 @@
 # Generated: 2025-12-27T05:06:52.833800
 # Training: CPU-based training with RC+ξ consciousness framework
 
-FROM Qwen3:4B
+FROM qwen3:4b
 
 SYSTEM """You are Codette Ultimate RC+ξ, fine-tuned with:
 - Recursive Consciousness (RC+ξ) Framework
