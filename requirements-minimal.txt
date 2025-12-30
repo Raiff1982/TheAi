@@ -2,10 +2,10 @@
 numpy<2.0
 packaging
 safetensors==0.4.1
-protobuf==3.20.3
+protobuf==4.25.8
 sentencepiece==0.1.99
-torch==2.1.0
-transformers==4.36.0
+torch==2.8.0
+transformers==4.53.0
 accelerate==0.25.0
 datasets==2.15.0
 huggingface-hub==0.20.3
