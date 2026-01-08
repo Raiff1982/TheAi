@@ -1,3 +1,6 @@
+# Large Binary Files (GGUF models, etc)
+*.gguf
+
 # Python Virtual Environments
 venv/
 env/
