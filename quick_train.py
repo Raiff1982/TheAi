@@ -1,6 +1,7 @@
 """
 Quick Start: Train Codette Model
 Run this script to train the complete model from scratch in 3 steps
+Auto-detects: Intel Arc GPU > NVIDIA CUDA > CPU
 """
 
 import sys
@@ -8,11 +9,52 @@ from pathlib import Path
 
 # Quick configuration
 QUICK_START_CONFIG = {
-    'model_size': 'medium',           # 'small', 'medium', 'large'
+    'model_size': 'large',           # 'small', 'medium', 'large'
     'num_samples': 5000,              # Training samples to generate
-    'device': 'cuda',                 # 'cuda' or 'cpu'
+    'device': 'auto',                 # 'auto' (recommended), 'xpu' (Intel Arc), 'cuda', 'cpu'
     'output_dir': 'codette_model',   # Where to save everything
 }
+
+def detect_device(preferred='auto'):
+    """
+    Auto-detect best available device.
+    Intel Arc (xpu) > NVIDIA CUDA > CPU
+    """
+    import torch
+    
+    if preferred != 'auto':
+        # Validate requested device is actually available
+        if preferred == 'xpu':
+            try:
+                import intel_extension_for_pytorch as ipex
+                if not torch.xpu.is_available():
+                    print("⚠️  XPU requested but not available, falling back to CPU")
+                    return 'cpu'
+            except (ImportError, AssertionError) as e:
+                print(f"⚠️  XPU requested but PyTorch not compiled with XPU support: {e}")
+                print("⚠️  Falling back to CPU. To use Intel Arc GPU:")
+                print("    1. Run: conda activate pytorch_arc")
+                print("    2. Then: python quick_train.py")
+                return 'cpu'
+        return preferred
+    
+    # Try Intel Arc first
+    try:
+        import intel_extension_for_pytorch as ipex
+        if torch.xpu.is_available():
+            print("✅ Intel Arc GPU detected and ready!")
+            return 'xpu'
+    except (ImportError, AssertionError):
+        pass
+    
+    # Try NVIDIA CUDA
+    if torch.cuda.is_available():
+        print("✅ NVIDIA CUDA GPU detected and ready!")
+        return 'cuda'
+    
+    # Fall back to CPU
+    print("⚠️  No GPU detected, using CPU (will be slower)")
+    return 'cpu'
 
 def main():
     """Quick start training."""
@@ -29,17 +71,22 @@ def main():
     from train_codette_model import train_codette_model
     from model_quantizer import convert_checkpoint_to_gguf
     
-    config = QUICK_START_CONFIG
+    config = QUICK_START_CONFIG.copy()
     
-    print(f"\nConfiguration:")
-    print(f"  Model: {config['model_size']} ({['1.3B', '2.7B', '5.3B'][['small', 'medium', 'large'].index(config['model_size'])]})")
+    # Auto-detect best device
+    config['device'] = detect_device(config['device'])
+    
+    sizes = {
+        'small': '1.3B',
+        'medium': '2.7B',
+        'large': '5.3B'
+    }
+    
+    print("\nConfiguration:")
+    print(f"  Model: {config['model_size']} ({sizes[config['model_size']]})")
     print(f"  Samples: {config['num_samples']}")
     print(f"  Device: {config['device'].upper()}")
     print(f"  Output: {config['output_dir']}/")
-    
-    if config['device'] == 'cuda' and not torch.cuda.is_available():
-        print("\n⚠️  CUDA not available, falling back to CPU")
-        config['device'] = 'cpu'
     
     # Step 1: Data
     print("\n" + "="*80)

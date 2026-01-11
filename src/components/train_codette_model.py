@@ -1,6 +1,7 @@
 """
 Training loop for Codette custom transformer model
 Implements gradient descent with checkpointing and consciousness metrics
+Auto-detects: Intel Arc GPU (XPU) > NVIDIA CUDA > CPU
 """
 
 import json
@@ -12,6 +13,30 @@ import torch.nn as nn
 from torch.optim import AdamW
 from torch.utils.data import DataLoader, IterableDataset
 from datetime import datetime
+
+
+def normalize_device(device: str) -> str:
+    """
+    Normalize device string and detect best available.
+    Supports: 'auto' (recommended), 'xpu' (Intel Arc), 'cuda', 'cpu'
+    """
+    if device == 'auto':
+        # Try Intel Arc first
+        try:
+            import intel_extension_for_pytorch as ipex
+            if torch.xpu.is_available():
+                return 'xpu'
+        except ImportError:
+            pass
+        
+        # Try NVIDIA CUDA
+        if torch.cuda.is_available():
+            return 'cuda'
+        
+        # Fall back to CPU
+        return 'cpu'
+    
+    return device
 
 
 class TextDataset(IterableDataset):
@@ -323,22 +348,25 @@ def train_codette_model(
     train_texts: List[str],
     eval_texts: List[str],
     checkpoint_dir: str = 'checkpoints',
-    device: str = 'cpu'
+    device: str = 'auto'
 ) -> dict:
     """
     Train Codette model.
     
     Args:
-        model: CustomTransformer instance
-        tokenizer: Tokenizer with encode/decode methods
-        train_texts: List of training texts
-        eval_texts: List of evaluation texts
-        checkpoint_dir: Directory to save checkpoints
-        device: 'cpu' or 'cuda'
+        model: Transformer model to train
+        tokenizer: Tokenizer for encoding text
+        train_texts: List of training text samples
+        eval_texts: List of evaluation text samples
+        checkpoint_dir: Where to save checkpoints
+        device: 'auto' (detect), 'xpu' (Intel Arc), 'cuda', or 'cpu'
     
     Returns:
         Training metrics dictionary
     """
+    # Normalize device (auto-detect if needed)
+    device = normalize_device(device)
+    print(f"Training on device: {device}")
     config = TrainingConfig()
     trainer = CodettTrainer(model, tokenizer, config, device=device)
     
