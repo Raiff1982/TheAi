@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Select dependency set (defaults to minimal CPU-safe set)
-ARG REQUIREMENTS_FILE=requirements-minimal.txt
+ARG REQUIREMENTS_FILE=requirements.txt
 
 # Copy requirements first for better caching
-COPY requirements.txt requirements-minimal.txt ./
+COPY requirements.txt requirements.txt ./
 
 # Install Python dependencies with compatible versions
 RUN pip install --no-cache-dir --upgrade pip && \
