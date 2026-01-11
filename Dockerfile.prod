@@ -38,10 +38,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Select dependency set (defaults to minimal CPU-safe set)
-ARG REQUIREMENTS_FILE=requirements-minimal.txt
+ARG REQUIREMENTS_FILE=requirements.txt
 
 # Copy requirements first for Docker layer caching
-COPY requirements.txt requirements-minimal.txt ./
+COPY requirements.txt requirements.txt ./
 
 # Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip setuptools wheel && \
