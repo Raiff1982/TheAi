@@ -3,7 +3,7 @@ numpy<2.0
 packaging
 safetensors==0.4.1
 protobuf==4.25.8
-sentencepiece==0.1.99
+sentencepiece==0.2.1
 torch==2.8.0
 transformers==4.53.0
 accelerate==0.25.0
