@@ -1,11 +1,29 @@
 # Large Binary Files (GGUF models, etc)
 *.gguf
 
+# Environment/secrets files (never commit these)
+.env.docker
+.env.production
+
+# Azurite storage emulator artifacts
+__azurite_db_*
+
+# Miniconda installers (too large for GitHub, download separately)
+Miniconda3-latest-Linux-x86_64.sh*
+
+# Intel oneAPI SDK (should not be in repo)
+Program Files (x86)InteloneAPI/
+
+# Windows artifacts
+$null
+
 # Python Virtual Environments
 venv/
 env/
 ENV/
+.venv/
 .venv
+.venv311/
 .env
 .python-version
 
@@ -45,6 +63,7 @@ coverage.xml
 htmlcov/
 
 # IDE & Editor
+.vs/
 .vscode/
 .idea/
 *.swp
