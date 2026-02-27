@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "codette-gradio",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["src/api/app.py"],
+      "port": 7860
+    },
+    {
+      "name": "aegis-flask",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["src/aegis.py"],
+      "port": 5000
+    }
+  ]
+}

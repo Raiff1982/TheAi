@@ -54,29 +54,21 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Download NLTK data
-python setup_nltk_complete.py
+python scripts/setup_nltk_complete.py
 ```
 
 ### 30-Second Example
 ```python
-from codette_new import Codette
+from src.components.ai_core import AICore
 
-codette = Codette(user_name="Alice")
-response = codette.respond("What is the nature of consciousness?")
+ai_core = AICore()
+response = await ai_core.generate_response("What is the nature of consciousness?")
 print(response)
 ```
 
-### CLI Usage
+### Web Interface (Gradio)
 ```bash
-python codette_cli.py "Explain quantum entanglement"      # single query
-python codette_cli.py -i -u Alice                          # interactive
-python interact.py                                        # REPL
-```
-
-### Web Interface
-```bash
-cd src/api
-python app.py  # Gradio UI on http://localhost:7860
+python src/api/app.py  # Gradio UI on http://localhost:7860
 ```
 
 ---
@@ -101,23 +93,16 @@ python app.py  # Gradio UI on http://localhost:7860
 
 ---
 
-## Two Implementation Variants
+## Primary Codebase (`/src`)
 
-### Main Codebase (`/src` + root)
-**Focus**: Quantum consciousness research, multi-perspective reasoning, theoretical AI
-- Entry: `codette_new.py` (CLI), `codette_enhanced.py` (PyMC/Bayesian)
-- Web: `src/api/app.py` (Gradio + GPT-2 Large)
-- Bot: `src/api/bot.py` (Microsoft Bot Framework)
-- Quantum: `src/quantum/`, `src/components/quantum_spiderweb.py`, `quantum_mathematics.py`
-- Model default: GPT-2 Large via `CODETTE_MODEL_ID`
-
-### Codette_final (`/Codette_final`)
-**Focus**: Production deployment, privacy-first local execution, enterprise features
-- Entry: `Codette_final/main.py` (async server)
-- Desktop UI: `Codette_final/app.py` (Tkinter + voice I/O)
-- Core engine: `Codette_final/ai_core_agix.py` (Llama 3 via Ollama, FAISS memory)
-- Security: JWT auth, Fernet encryption, bcrypt hashing
-- Multi-agent: `Codette_final/components/multi_agent.py`
+All core code lives in `src/` with a modular component architecture:
+- **Web UI**: `src/api/app.py` (Gradio + GPT-2 Large)
+- **Bot**: `src/api/bot.py` (Microsoft Bot Framework)
+- **AI Core**: `src/components/ai_core.py` (30+ components, RC+xi consciousness)
+- **Quantum**: `src/quantum/`, `src/components/quantum_spiderweb.py`
+- **Security**: `src/aegis.py`, `src/aegis_integration/`
+- **Framework**: `src/framework/` (universal reasoning, cognition cocooner, dream reweaver)
+- **Model default**: GPT-2 Large via `CODETTE_MODEL_ID`
 
 ---
 
@@ -149,14 +134,14 @@ python app.py  # Gradio UI on http://localhost:7860
 ### Key Components
 | Component | Purpose | Key Files |
 |-----------|---------|-----------|
-| 11 Perspectives | Multi-lens reasoning (Newton, DaVinci, Quantum, etc.) | `ai_core.py`, `perspectives.py` |
-| 8 Quantum Equations | Mathematical consciousness modeling | `quantum_mathematics.py` |
-| 5D Spiderweb | Multi-dimensional thought propagation (Ψ, Φ, λ, τ, χ) | `quantum_spiderweb.py` |
-| Cocoon Memory | Persistent quantum state snapshots | `cocoon_manager.py`, `cocoons/` |
-| Defense System | Security & safety validation | `defense_system.py` |
-| Health Monitor | Real-time diagnostics & anomaly detection | `health_monitor.py` |
-| FAISS Vector Memory | Semantic search (Codette_final) | `Codette_final/ai_core_agix.py` |
-| Multi-Agent System | Task delegation & parallel reasoning (Codette_final) | `Codette_final/components/multi_agent.py` |
+| 11 Perspectives | Multi-lens reasoning (Newton, DaVinci, Quantum, etc.) | `src/components/ai_core.py` |
+| RC+xi Consciousness | Recursive convergence under epistemic tension | `src/components/recursive_consciousness.py` |
+| 8 Quantum Equations | Mathematical consciousness modeling | `src/codette_capabilities.py` |
+| 5D Spiderweb | Multi-dimensional thought propagation (Ψ, Φ, λ, τ, χ) | `src/components/quantum_spiderweb.py` |
+| AEGIS Council | Security council with blockchain audit | `src/aegis.py`, `src/aegis_integration/` |
+| Cocoon Memory | Persistent quantum state snapshots | `src/utils/cocoon_manager.py`, `data/cocoons/` |
+| Defense System | Security & safety validation | `src/components/defense_system.py` |
+| Health Monitor | Real-time diagnostics & anomaly detection | `src/components/health_monitor.py` |
 
 ---
 
@@ -171,10 +156,8 @@ python app.py  # Gradio UI on http://localhost:7860
 ---
 
 ## Usage Patterns
-- **Simple query**: `Codette` via `codette_new.py`
 - **Gradio web app**: `python src/api/app.py`
 - **Bot Framework**: `src/api/bot.py` with `AICore`
-- **Production desktop/server**: `python Codette_final/app.py` or `python Codette_final/main.py`
 - **Quantum research**: `python src/quantum/codette_quantum_multicore.py`
 
 ---
@@ -226,12 +209,13 @@ pip install -r requirements.txt
 ```bash
 python src/tests/verification/verify_deps.py
 python src/tests/verification/verify_static.py
-python DEPLOYMENT_CHECKLIST.py
+python scripts/DEPLOYMENT_CHECKLIST.py
 pytest src/tests/
+pytest tests/
 ```
 Quick health probe:
 ```python
-from health_monitor import HealthMonitor
+from src.components.health_monitor import HealthMonitor
 print(HealthMonitor().check_status())
 ```
 
@@ -248,10 +232,11 @@ print(HealthMonitor().check_status())
 ---
 
 ## Key Insights
-- Two stacks: research (`/src`) vs production (`/Codette_final`)
-- Memory layers: in-memory, JSON cocoons, SQLite, FAISS
+- All code consolidated in `src/` with modular component architecture
+- Memory layers: in-memory, JSON cocoons, SQLite
 - Perspective routing: all 11 evaluated; top 3 chosen per query; temperature-based creativity
 - Quantum math: real equations, numerically stable, integrated with spiderweb
+- RC+xi consciousness framework for recursive identity stabilization
 
 ---
 
@@ -271,23 +256,30 @@ print(HealthMonitor().check_status())
 
 ---
 
-## Project Structure (high level)
+## Project Structure
 ```
 TheAi/
-├── codette_*.py                     # Entry points
-├── quantum_mathematics.py           # Quantum equations
-├── config.py, config.json           # Configuration
-├── database_manager.py              # Persistence
-├── health_monitor.py                # Diagnostics
-├── perspectives.py                  # 11-perspective routing
-├── cocoons/                         # Persistent quantum states
-├── Codette_final/                   # Production stack (Ollama, FAISS, JWT/Fernet)
-└── src/
-    ├── api/                         # Gradio, Bot
-    ├── components/                  # Core systems (AICore, quantum)
-    ├── quantum/                     # Quantum processing
-    ├── utils/                       # Utilities
-    └── tests/                       # Verification
+├── src/                             # PRIMARY SOURCE CODE
+│   ├── api/                         # Gradio web UI, Bot Framework
+│   ├── components/                  # 30+ core components (AICore, consciousness, quantum)
+│   ├── framework/                   # Universal reasoning, cocooner, dream reweaver
+│   ├── quantum/                     # Quantum processing modules
+│   ├── aegis.py                     # AEGIS security council
+│   ├── aegis_integration/           # AEGIS bridge & routes
+│   ├── cognitive/                   # Cognitive processor
+│   ├── knowledge_base/              # Grounding truth & core knowledge
+│   ├── utils/                       # Cocoon manager, database, response processing
+│   ├── config/                      # JSON configs & schemas
+│   ├── assets/                      # Diagrams & images
+│   └── tests/                       # Unit tests & verification
+├── config/                          # Top-level configuration files
+├── data/                            # Datasets, cocoons, trained models
+├── training/                        # Finetuning scripts & configs
+├── scripts/                         # Utility & setup scripts
+├── tests/                           # Integration & system tests
+├── docs/                            # All documentation (organized by topic)
+├── examples/                        # Example implementations
+└── _archive/                        # Superseded code (old versions)
 ```
 
 ---
@@ -304,8 +296,7 @@ TheAi/
 ## External Integration
 - Microsoft Bot Framework: `src/api/bot.py` + `src/components/ai_core.py`
 - Gradio UI: `src/api/app.py`
-- FastAPI REST: `codette_api.py`
-- Llama 3 (Codette_final via Ollama): `Codette_final/ai_core_agix.py`
+- FastAPI REST: `src/codette_api.py`
 
 ---
 
