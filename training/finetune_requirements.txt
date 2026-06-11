@@ -1,5 +1,5 @@
 # Fine-tuning requirements
-torch>=2.0.0
+torch>=2.12.0
 transformers>=4.40.0
 datasets>=2.14.0
 accelerate>=0.26.0
